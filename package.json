@@ -6,8 +6,10 @@
   "scripts": {
     "styles:build": "tailwindcss -i ./app/styles/tailwind.css -o ./app/styles/index.css",
     "styles:watch": "npm run styles:build -- --watch",
-    "build": "npm run styles:build && remix build",
+    "prebuild": "npm run styles:build && prisma generate",
+    "build": "remix build",
     "remix:dev": "remix dev",
+    "predev": "prisma generate",
     "dev": "npm-run-all --parallel styles:watch remix:dev",
     "postinstall": "remix setup node",
     "deploy": "flyctl deploy --build-arg REMIX_TOKEN=${REMIX_TOKEN}",

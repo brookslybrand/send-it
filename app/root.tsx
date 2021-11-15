@@ -1,22 +1,11 @@
-import type { LinksFunction, LoaderFunction } from 'remix'
-import {
-  Meta,
-  Links,
-  Scripts,
-  useLoaderData,
-  LiveReload,
-  useCatch,
-} from 'remix'
+import type { LinksFunction } from 'remix'
+import { Meta, Links, Scripts, LiveReload, useCatch } from 'remix'
 import { Outlet } from 'react-router-dom'
 
 import stylesUrl from './styles/index.css'
 
 export let links: LinksFunction = () => {
   return [{ rel: 'stylesheet', href: stylesUrl }]
-}
-
-export let loader: LoaderFunction = async () => {
-  return { date: new Date() }
 }
 
 function Document({
@@ -45,14 +34,9 @@ function Document({
 }
 
 export default function App() {
-  let data = useLoaderData()
-
   return (
     <Document>
       <Outlet />
-      <footer>
-        <p>This page was rendered at {data.date.toLocaleString()}</p>
-      </footer>
     </Document>
   )
 }
