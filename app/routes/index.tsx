@@ -2,17 +2,11 @@ import type { MetaFunction, LinksFunction, LoaderFunction } from "remix";
 import { useLoaderData } from "remix";
 import { Link } from "react-router-dom";
 
-import stylesUrl from "../styles/index.css";
-
 export let meta: MetaFunction = () => {
   return {
     title: "Remix Starter",
-    description: "Welcome to remix!"
+    description: "Welcome to remix!",
   };
-};
-
-export let links: LinksFunction = () => {
-  return [{ rel: "stylesheet", href: stylesUrl }];
 };
 
 export let loader: LoaderFunction = async () => {

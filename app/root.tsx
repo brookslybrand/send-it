@@ -5,11 +5,11 @@ import {
   Scripts,
   useLoaderData,
   LiveReload,
-  useCatch
+  useCatch,
 } from "remix";
 import { Outlet } from "react-router-dom";
 
-import stylesUrl from "./styles/global.css";
+import stylesUrl from "./styles/index.css";
 
 export let links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: stylesUrl }];
@@ -21,7 +21,7 @@ export let loader: LoaderFunction = async () => {
 
 function Document({
   children,
-  title
+  title,
 }: {
   children: React.ReactNode;
   title?: string;
