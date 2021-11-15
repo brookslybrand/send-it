@@ -2,4 +2,6 @@
 . "$(dirname "$0")/_/husky.sh"
 
 npm run styles:build
-
+git add ./app/styles/**.css
+npm run pretty-quick
+npm run lint

@@ -1,4 +1,4 @@
-import { Form } from "remix";
+import { Form } from 'remix'
 
 export default function NewPost() {
   return (
@@ -11,5 +11,5 @@ export default function NewPost() {
 
       <button type="submit">Create post</button>
     </Form>
-  );
+  )
 }

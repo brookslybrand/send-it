@@ -1,23 +1,23 @@
-import type { MetaFunction, LinksFunction, LoaderFunction } from "remix";
-import { useLoaderData } from "remix";
-import { Link } from "react-router-dom";
+import type { MetaFunction, LoaderFunction } from 'remix'
+import { useLoaderData } from 'remix'
+import { Link } from 'react-router-dom'
 
 export let meta: MetaFunction = () => {
   return {
-    title: "Remix Starter",
-    description: "Welcome to remix!",
-  };
-};
+    title: 'Remix Starter',
+    description: 'Welcome to remix!',
+  }
+}
 
 export let loader: LoaderFunction = async () => {
-  return { message: "this is awesome 😎" };
-};
+  return { message: 'this is awesome 😎' }
+}
 
 export default function Index() {
-  let data = useLoaderData();
+  let data = useLoaderData()
 
   return (
-    <div style={{ textAlign: "center", padding: 20 }}>
+    <div style={{ textAlign: 'center', padding: 20 }}>
       <h2>Welcome to Remix!</h2>
       <p>
         <a href="https://docs.remix.run">Check out the docs</a> to get started.
@@ -28,5 +28,5 @@ export default function Index() {
         link will land you in your root CatchBoundary component.
       </p>
     </div>
-  );
+  )
 }
