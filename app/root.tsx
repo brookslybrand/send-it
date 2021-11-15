@@ -50,7 +50,7 @@ export default function App() {
   return (
     <Document>
       <Outlet />
-      <footer>
+      <footer className="m-2">
         <p>This page was rendered at {data.date.toLocaleString()}</p>
       </footer>
     </Document>
