@@ -10,11 +10,26 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-model Post {
+model User {
+  id       Int       @id @default(autoincrement())
+  name     String
+  email    String?   @unique
+  sessions Session[]
+}
+
+model Session {
+  id        Int       @id @default(autoincrement())
+  startTime DateTime
+  endTime   DateTime
+  projects  Project[]
+  User      User?     @relation(fields: [userId], references: [id])
+  userId    Int?
+}
+
+model Project {
   id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  title     String
-  content   String?
-  published Boolean  @default(false)
+  grade     String
+  attempts  Int      @default(0)
+  Session   Session? @relation(fields: [sessionId], references: [id])
+  sessionId Int?
 }

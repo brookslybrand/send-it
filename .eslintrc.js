@@ -21,5 +21,6 @@ module.exports = {
   rules: {
     'react/react-in-jsx-scope': 'off',
     'prefer-const': 'off',
+    '@typescript-eslint/no-var-requires': 'off',
   },
 }

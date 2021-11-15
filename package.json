@@ -18,6 +18,9 @@
     "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx ./app",
     "pretty-quick": "pretty-quick --staged"
   },
+  "prisma": {
+    "seed": "ts-node ./prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^3.4.2",
     "@remix-run/react": "^0.20.1",
