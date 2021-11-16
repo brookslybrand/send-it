@@ -24,7 +24,7 @@ function Document({
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="text-gray-900">
         {children}
         <Scripts />
         {process.env.NODE_ENV === 'development' && <LiveReload />}
