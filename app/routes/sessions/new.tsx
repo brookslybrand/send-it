@@ -17,9 +17,34 @@ export let meta: MetaFunction = () => {
 }
 
 export let action: ActionFunction = async ({ request }) => {
-  console.log(new URLSearchParams(await request.text()))
+  const urlSearchParams = new URLSearchParams(await request.text())
+  const sessionId = Number(urlSearchParams.get('sessionId'))
+  const grade = urlSearchParams.get('grade')
 
-  return json({ ok: true })
+  if (Number.isNaN(sessionId)) {
+    return json({ message: 'No session provided' }, 400)
+  } else if (!isGrade(grade)) {
+    return json({ message: 'Invalid grade' }, 400)
+  }
+
+  const sessionWithNewProject = await prisma.session.update({
+    where: {
+      // TODO: Get this
+      id: sessionId,
+    },
+    data: {
+      projects: {
+        create: {
+          grade,
+        },
+      },
+    },
+    include: {
+      projects: true,
+    },
+  })
+
+  return json({ session: sessionWithNewProject.projects })
 }
 
 type LoaderData = {
@@ -93,7 +118,11 @@ export default function NewSession() {
           label="End Time"
           defaultValue={session.endTime}
         />
-        <Grade label="VB - V0" projects={session.projects} />
+        <Grade
+          sessionId={session.id}
+          grade="vb-v0"
+          projects={session.projects}
+        />
       </section>
     </main>
   )
@@ -122,14 +151,19 @@ function DateTimeInput({ id, name, label, defaultValue }: DateTimeInputProps) {
   )
 }
 
+type Grade = 'vb-v0' | 'v1-v2' | 'v3-v4' | 'v5-v6' | 'v7-v8' | 'v9-v10' | 'v11+'
 type GradeProps = {
-  label: string
+  sessionId: number
+  grade: Grade
   projects: Project[]
 }
-function Grade({ label, projects }: GradeProps) {
+
+function Grade({ sessionId, grade, projects }: GradeProps) {
   return (
     <div className="py-4">
       <Form method="post">
+        <input type="hidden" name="sessionId" value={sessionId} />
+        <input type="hidden" name="grade" value={grade} />
         <button
           type="submit"
           className={clsx(
@@ -137,7 +171,7 @@ function Grade({ label, projects }: GradeProps) {
             'text-green-600 hover:text-green-800 active:text-green-900 group'
           )}
         >
-          <span>{label}</span>
+          <span>{createGradeLabel(grade)}</span>
 
           <span
             // Note: this will break visually if there is a 3 digit number
@@ -151,5 +185,38 @@ function Grade({ label, projects }: GradeProps) {
         </button>
       </Form>
     </div>
+  )
+}
+
+function createGradeLabel(grade: Grade) {
+  switch (grade) {
+    case 'vb-v0':
+      return 'VB - V0'
+    case 'v1-v2':
+      return 'V1 - V2'
+    case 'v3-v4':
+      return 'V3 - V4'
+    case 'v5-v6':
+      return 'V5 - V6'
+    case 'v7-v8':
+      return 'V7 - V8'
+    case 'v9-v10':
+      return 'V9 - V10'
+    case 'v11+':
+      return 'V11+'
+    default:
+      throw new Error('Invalid grade')
+  }
+}
+
+function isGrade(grade: unknown): grade is Grade {
+  return (
+    grade === 'vb-v0' ||
+    grade === 'v1-v2' ||
+    grade === 'v3-v4' ||
+    grade === 'v5-v6' ||
+    grade === 'v7-v8' ||
+    grade === 'v9-v10' ||
+    grade === 'v11+'
   )
 }

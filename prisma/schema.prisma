@@ -32,5 +32,5 @@ model Project {
   grade     String
   attempts  Int      @default(0)
   Session   Session? @relation(fields: [sessionId], references: [id])
-  sessionId Int?
+  sessionId Int ?
 }
