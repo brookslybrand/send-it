@@ -17,9 +17,9 @@ export let meta: MetaFunction = () => {
 }
 
 export let action: ActionFunction = async ({ request }) => {
-  const urlSearchParams = new URLSearchParams(await request.text())
-  const sessionId = Number(urlSearchParams.get('sessionId'))
-  const grade = urlSearchParams.get('grade')
+  let body = await request.formData()
+  const sessionId = Number(body.get('sessionId'))
+  const grade = body.get('grade')
 
   if (Number.isNaN(sessionId)) {
     return json({ message: 'No session provided' }, 400)
@@ -102,6 +102,13 @@ export let loader: LoaderFunction = async () => {
 export default function NewSession() {
   let { session } = useLoaderData<Serialized<LoaderData>>()
 
+  let projectsByGrade = createEmptyProjects()
+  for (let project of session.projects) {
+    let { grade } = project
+    if (!isGrade(grade)) throw new Error('Invalid grade')
+    projectsByGrade[grade].push(project)
+  }
+
   return (
     <main className="flex flex-col w-1/2 m-auto p-8">
       <h1 className="text-6xl text-center">New Session</h1>
@@ -118,11 +125,14 @@ export default function NewSession() {
           label="End Time"
           defaultValue={session.endTime}
         />
-        <Grade
-          sessionId={session.id}
-          grade="vb-v0"
-          projects={session.projects}
-        />
+        {grades.map((grade) => (
+          <Grade
+            key={grade}
+            sessionId={session.id}
+            grade={grade}
+            projects={projectsByGrade[grade]}
+          />
+        ))}
       </section>
     </main>
   )
@@ -151,7 +161,6 @@ function DateTimeInput({ id, name, label, defaultValue }: DateTimeInputProps) {
   )
 }
 
-type Grade = 'vb-v0' | 'v1-v2' | 'v3-v4' | 'v5-v6' | 'v7-v8' | 'v9-v10' | 'v11+'
 type GradeProps = {
   sessionId: number
   grade: Grade
@@ -184,39 +193,53 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
           </span>
         </button>
       </Form>
+      <ul>
+        {projects.map(({ id, attempts }) => (
+          <li key={id}>{attempts}</li>
+        ))}
+      </ul>
     </div>
   )
 }
 
-function createGradeLabel(grade: Grade) {
-  switch (grade) {
-    case 'vb-v0':
-      return 'VB - V0'
-    case 'v1-v2':
-      return 'V1 - V2'
-    case 'v3-v4':
-      return 'V3 - V4'
-    case 'v5-v6':
-      return 'V5 - V6'
-    case 'v7-v8':
-      return 'V7 - V8'
-    case 'v9-v10':
-      return 'V9 - V10'
-    case 'v11+':
-      return 'V11+'
-    default:
-      throw new Error('Invalid grade')
+type Grade = 'vb-v0' | 'v1-v2' | 'v3-v4' | 'v5-v6' | 'v7-v8' | 'v9-v10' | 'v11+'
+
+let gradeToLabel: Record<Grade, string> = {
+  'vb-v0': 'VB - V0',
+  'v1-v2': 'V1 - V2',
+  'v3-v4': 'V3 - V4',
+  'v5-v6': 'V5 - V6',
+  'v7-v8': 'V7 - V8',
+  'v9-v10': 'V9 - V10',
+  'v11+': 'V11+',
+}
+
+function createEmptyProjects(): { [key in Grade]: Project[] } {
+  return {
+    'vb-v0': [],
+    'v1-v2': [],
+    'v3-v4': [],
+    'v5-v6': [],
+    'v7-v8': [],
+    'v9-v10': [],
+    'v11+': [],
   }
 }
 
-function isGrade(grade: unknown): grade is Grade {
-  return (
-    grade === 'vb-v0' ||
-    grade === 'v1-v2' ||
-    grade === 'v3-v4' ||
-    grade === 'v5-v6' ||
-    grade === 'v7-v8' ||
-    grade === 'v9-v10' ||
-    grade === 'v11+'
-  )
+// Object.keys is type string[], so we have to type caste it
+let grades = Object.keys(gradeToLabel) as Array<keyof typeof gradeToLabel>
+let gradesSet = new Set(grades)
+
+function createGradeLabel(grade: Grade) {
+  let label = gradeToLabel[grade]
+  if (label === undefined) {
+    throw new Error('Invalid grade')
+  }
+  return label
+}
+
+// would prefer to use `unknown`, but I can't get that to work for type narrowing
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isGrade(grade: any): grade is Grade {
+  return gradesSet.has(grade)
 }
