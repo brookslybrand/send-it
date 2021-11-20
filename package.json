@@ -4,6 +4,7 @@
   "description": "",
   "license": "",
   "scripts": {
+    "db:init": "touch ./prisma/dev.db && prisma migrate dev && prisma db seed",
     "styles:build": "tailwindcss -i ./app/styles/tailwind.css -o ./app/styles/index.css",
     "styles:watch": "npm run styles:build -- --watch",
     "prebuild": "npm run styles:build && prisma generate",

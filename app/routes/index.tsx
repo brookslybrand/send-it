@@ -1,4 +1,4 @@
-import type { MetaFunction, LoaderFunction } from 'remix'
+import { MetaFunction, LoaderFunction, Link } from 'remix'
 import { useLoaderData } from 'remix'
 import { prisma } from '~/db'
 import { User } from '.prisma/client'
@@ -35,6 +35,13 @@ export default function Index() {
           <li key={id}>{name}</li>
         ))}
       </ol>
+
+      <Link
+        className="block text-2xl mt-6 text-blue-800 hover:text-blue-400"
+        to="sessions/new"
+      >
+        Create a new session
+      </Link>
     </div>
   )
 }
