@@ -1,4 +1,5 @@
 import { Project, Session } from '.prisma/client'
+import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
 import {
   json,
@@ -169,7 +170,7 @@ type GradeProps = {
 
 function Grade({ sessionId, grade, projects }: GradeProps) {
   return (
-    <div className="py-4">
+    <div className="py-8">
       <Form method="post">
         <input type="hidden" name="sessionId" value={sessionId} />
         <input type="hidden" name="grade" value={grade} />
@@ -193,9 +194,12 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
           </span>
         </button>
       </Form>
+      <p className="pt-2 text-xl text-gray-400">Attempts</p>
       <ul>
         {projects.map(({ id, attempts }) => (
-          <li key={id}>{attempts}</li>
+          <li key={id}>
+            <AttemptsControl attempts={attempts} />
+          </li>
         ))}
       </ul>
     </div>
@@ -243,3 +247,60 @@ function createGradeLabel(grade: Grade) {
 function isGrade(grade: any): grade is Grade {
   return gradesSet.has(grade)
 }
+
+type AttemptsControlProps = { attempts: number }
+function AttemptsControl({ attempts }: AttemptsControlProps) {
+  return (
+    <Form className="flex items-center py-4 space-x-6">
+      <button>
+        <VisuallyHidden>decrease attempts</VisuallyHidden>
+        <MinusIcon />
+      </button>
+      <span className="text-3xl font-semibold text-gray-700">{attempts}</span>
+      <button>
+        <VisuallyHidden>increase attempts</VisuallyHidden>
+        <PlusIcon />
+      </button>
+    </Form>
+  )
+}
+
+function MinusIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={iconClassName}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1}
+        d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={iconClassName}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1}
+        d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  )
+}
+
+const iconClassName = 'h-16 w-16 text-green-800 text-opacity-50'

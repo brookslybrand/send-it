@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@prisma/client": "^3.4.2",
+    "@reach/visually-hidden": "^0.16.0",
     "@remix-run/react": "^v1.0.0-rc.2",
     "@remix-run/serve": "^v1.0.0-rc.2",
     "clsx": "^1.1.1",
