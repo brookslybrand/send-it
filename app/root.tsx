@@ -1,4 +1,4 @@
-import type { LinksFunction } from 'remix'
+import { LinksFunction, ScrollRestoration } from 'remix'
 import { Meta, Links, Scripts, LiveReload, useCatch } from 'remix'
 import { Outlet } from 'react-router-dom'
 
@@ -26,6 +26,7 @@ function Document({
       </head>
       <body className="text-gray-900">
         {children}
+        <ScrollRestoration />
         <Scripts />
         {process.env.NODE_ENV === 'development' && <LiveReload />}
       </body>
