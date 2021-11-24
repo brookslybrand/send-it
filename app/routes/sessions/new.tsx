@@ -17,12 +17,25 @@ export let meta: MetaFunction = () => {
   }
 }
 
+// not a fan of this...
+function parseFormNumber(body: FormData, key: string) {
+  return body.has(key) ? Number(body.get(key)) : NaN
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
 export let action: ActionFunction = async ({ request }) => {
   let body = await request.formData()
 
+  console.log(body)
+
   // TODO: implement hidden method for progressive enhancement
   if (request.method.toLowerCase() === 'delete') {
-    const projectId = Number(body.get('id'))
+    const projectId = parseFormNumber(body, 'id')
 
     if (Number.isNaN(projectId)) {
       return json({ message: 'No project ID provided' }, 400)
@@ -31,7 +44,26 @@ export let action: ActionFunction = async ({ request }) => {
     return json({ delete: true })
   }
 
-  const sessionId = Number(body.get('sessionId'))
+  if (request.method.toLowerCase() === 'patch') {
+    const projectId = parseFormNumber(body, 'id')
+    const attempts = parseFormNumber(body, 'attempts')
+
+    await sleep(1000)
+
+    if (Number.isNaN(projectId)) {
+      return json({ message: 'No project ID provided' }, 400)
+    }
+    if (Number.isNaN(attempts)) {
+      return json({ message: 'No project ID provided' }, 400)
+    }
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { attempts },
+    })
+    return json({ delete: true })
+  }
+
+  const sessionId = parseFormNumber(body, 'sessionId')
   const grade = body.get('grade')
 
   if (Number.isNaN(sessionId)) {
@@ -125,6 +157,7 @@ export default function NewSession() {
   return (
     <main className="flex flex-col w-1/2 m-auto p-8">
       <h1 className="text-6xl text-center">New Session</h1>
+
       <section className="py-16 space-y-8">
         <DateTimeInput
           id="start-time"
@@ -201,7 +234,7 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
       <ul>
         {projects.map(({ id, attempts }) => (
           <li key={id} className="flex justify-between">
-            <AttemptsControl attempts={attempts} />
+            <AttemptsControl projectId={id} attempts={attempts} />
             <RemoveProjectButton projectId={id} />
           </li>
         ))}
@@ -252,21 +285,31 @@ function isGrade(grade: any): grade is Grade {
   return gradesSet.has(grade)
 }
 
-type AttemptsControlProps = { attempts: number }
-function AttemptsControl({ attempts }: AttemptsControlProps) {
+type AttemptsControlProps = { projectId: number; attempts: number }
+function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
   const atMinAttempts = attempts === 1
   return (
-    <Form className="flex items-center py-4 space-x-6">
-      <button className="group" disabled={atMinAttempts}>
-        <VisuallyHidden>decrease attempts</VisuallyHidden>
-        <MinusIcon disabled={atMinAttempts} />
-      </button>
+    <div className="flex items-center py-4 space-x-6">
+      <Form method="patch">
+        <input type="hidden" name="_method" value="patch" />
+        <input type="hidden" name="attempts" value={attempts - 1} />
+        <input type="hidden" name="id" value={projectId} />
+        <button className="group" disabled={atMinAttempts}>
+          <VisuallyHidden>decrease attempts</VisuallyHidden>
+          <MinusIcon disabled={atMinAttempts} />
+        </button>
+      </Form>
       <span className="text-3xl font-semibold text-gray-700">{attempts}</span>
-      <button className="group">
-        <VisuallyHidden>increase attempts</VisuallyHidden>
-        <PlusIcon />
-      </button>
-    </Form>
+      <Form method="patch">
+        <input type="hidden" name="_method" value="patch" />
+        <input type="hidden" name="attempts" value={attempts + 1} />
+        <input type="hidden" name="id" value={projectId} />
+        <button className="group" name="this" value="butts" type="submit">
+          <VisuallyHidden>increase attempts</VisuallyHidden>
+          <PlusIcon />
+        </button>
+      </Form>
+    </div>
   )
 }
 
@@ -277,7 +320,7 @@ function RemoveProjectButton({ projectId }: RemoveProjectButtonProps) {
       {/* TODO: abstract out this method input */}
       <input type="hidden" name="_method" value="delete" />
       <input type="hidden" name="id" value={projectId} />
-      <button type="submit" name="butts" value="more butts" className="group">
+      <button type="submit" className="group">
         <VisuallyHidden>remove project</VisuallyHidden>
         <RemoveIcon />
       </button>
@@ -339,6 +382,7 @@ function PlusIcon({ disabled = false }: IconProps) {
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
+      aria-hidden="true"
     >
       <path
         strokeLinecap="round"
