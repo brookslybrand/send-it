@@ -3,13 +3,13 @@ import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
 import {
   json,
-  Form,
   MetaFunction,
   LoaderFunction,
   ActionFunction,
   useLoaderData,
 } from 'remix'
 import { prisma, Serialized } from '~/db'
+import { FormWithHiddenMethod, getMethod } from '~/utils/form'
 
 export let meta: MetaFunction = () => {
   return {
@@ -30,66 +30,68 @@ function sleep(ms: number) {
 
 export let action: ActionFunction = async ({ request }) => {
   let body = await request.formData()
+  const method = await getMethod(request)
 
-  console.log(body)
+  switch (method) {
+    case 'post': {
+      const sessionId = parseFormNumber(body, 'sessionId')
+      const grade = body.get('grade')
 
-  // TODO: implement hidden method for progressive enhancement
-  if (request.method.toLowerCase() === 'delete') {
-    const projectId = parseFormNumber(body, 'id')
+      if (Number.isNaN(sessionId)) {
+        return json({ message: 'No session ID provided' }, 400)
+      } else if (!isGrade(grade)) {
+        return json({ message: 'Invalid grade' }, 400)
+      }
 
-    if (Number.isNaN(projectId)) {
-      return json({ message: 'No project ID provided' }, 400)
-    }
-    await prisma.project.delete({ where: { id: projectId } })
-    return json({ delete: true })
-  }
-
-  if (request.method.toLowerCase() === 'patch') {
-    const projectId = parseFormNumber(body, 'id')
-    const attempts = parseFormNumber(body, 'attempts')
-
-    await sleep(1000)
-
-    if (Number.isNaN(projectId)) {
-      return json({ message: 'No project ID provided' }, 400)
-    }
-    if (Number.isNaN(attempts)) {
-      return json({ message: 'No project ID provided' }, 400)
-    }
-    await prisma.project.update({
-      where: { id: projectId },
-      data: { attempts },
-    })
-    return json({ delete: true })
-  }
-
-  const sessionId = parseFormNumber(body, 'sessionId')
-  const grade = body.get('grade')
-
-  if (Number.isNaN(sessionId)) {
-    return json({ message: 'No session ID provided' }, 400)
-  } else if (!isGrade(grade)) {
-    return json({ message: 'Invalid grade' }, 400)
-  }
-
-  const sessionWithNewProject = await prisma.session.update({
-    where: {
-      // TODO: Get this
-      id: sessionId,
-    },
-    data: {
-      projects: {
-        create: {
-          grade,
+      const sessionWithNewProject = await prisma.session.update({
+        where: {
+          id: sessionId,
         },
-      },
-    },
-    include: {
-      projects: true,
-    },
-  })
+        data: {
+          projects: {
+            create: {
+              grade,
+            },
+          },
+        },
+        include: {
+          projects: true,
+        },
+      })
 
-  return json({ session: sessionWithNewProject.projects })
+      return json({ session: sessionWithNewProject.projects })
+    }
+    case 'delete': {
+      const projectId = parseFormNumber(body, 'id')
+
+      if (Number.isNaN(projectId)) {
+        return json({ message: 'No project ID provided' }, 400)
+      }
+      await prisma.project.delete({ where: { id: projectId } })
+      return json({ delete: true })
+    }
+    case 'patch': {
+      const projectId = parseFormNumber(body, 'id')
+      const attempts = parseFormNumber(body, 'attempts')
+
+      await sleep(1000)
+
+      if (Number.isNaN(projectId)) {
+        return json({ message: 'No project ID provided' }, 400)
+      }
+      if (Number.isNaN(attempts)) {
+        return json({ message: 'No project ID provided' }, 400)
+      }
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { attempts },
+      })
+      return json({ delete: true })
+    }
+    default: {
+      return json({ message: `Unsupported method ${method}` }, 501)
+    }
+  }
 }
 
 type LoaderData = {
@@ -216,7 +218,7 @@ type GradeProps = {
 function Grade({ sessionId, grade, projects }: GradeProps) {
   return (
     <div className="py-8">
-      <Form method="post">
+      <FormWithHiddenMethod method="post">
         <input type="hidden" name="sessionId" value={sessionId} />
         <input type="hidden" name="grade" value={grade} />
         <button
@@ -229,7 +231,7 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
           <span>{createGradeLabel(grade)}</span>
           <ProjectIcon count={projects.length} />
         </button>
-      </Form>
+      </FormWithHiddenMethod>
       <p className="pt-2 text-xl text-gray-400">Attempts</p>
       <ul>
         {projects.map(({ id, attempts }) => (
@@ -290,25 +292,23 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
   const atMinAttempts = attempts === 1
   return (
     <div className="flex items-center py-4 space-x-6">
-      <Form method="patch">
-        <input type="hidden" name="_method" value="patch" />
+      <FormWithHiddenMethod method="patch">
         <input type="hidden" name="attempts" value={attempts - 1} />
         <input type="hidden" name="id" value={projectId} />
         <button className="group" disabled={atMinAttempts}>
           <VisuallyHidden>decrease attempts</VisuallyHidden>
           <MinusIcon disabled={atMinAttempts} />
         </button>
-      </Form>
+      </FormWithHiddenMethod>
       <span className="text-3xl font-semibold text-gray-700">{attempts}</span>
-      <Form method="patch">
-        <input type="hidden" name="_method" value="patch" />
+      <FormWithHiddenMethod method="patch">
         <input type="hidden" name="attempts" value={attempts + 1} />
         <input type="hidden" name="id" value={projectId} />
         <button className="group" name="this" value="butts" type="submit">
           <VisuallyHidden>increase attempts</VisuallyHidden>
           <PlusIcon />
         </button>
-      </Form>
+      </FormWithHiddenMethod>
     </div>
   )
 }
@@ -316,15 +316,13 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
 type RemoveProjectButtonProps = { projectId: number }
 function RemoveProjectButton({ projectId }: RemoveProjectButtonProps) {
   return (
-    <Form method="delete">
-      {/* TODO: abstract out this method input */}
-      <input type="hidden" name="_method" value="delete" />
+    <FormWithHiddenMethod method="delete">
       <input type="hidden" name="id" value={projectId} />
       <button type="submit" className="group">
         <VisuallyHidden>remove project</VisuallyHidden>
         <RemoveIcon />
       </button>
-    </Form>
+    </FormWithHiddenMethod>
   )
 }
 
