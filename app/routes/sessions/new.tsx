@@ -1,15 +1,10 @@
-import { Project, Session } from '.prisma/client'
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
-import {
-  json,
-  MetaFunction,
-  LoaderFunction,
-  ActionFunction,
-  useLoaderData,
-} from 'remix'
+import { json, useLoaderData } from 'remix'
 import { prisma, Serialized } from '~/db'
 import { FormWithHiddenMethod, getMethod } from '~/utils/form'
+import type { Project, Session } from '.prisma/client'
+import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
 
 export let meta: MetaFunction = () => {
   return {
@@ -33,6 +28,7 @@ export let action: ActionFunction = async ({ request }) => {
   const method = await getMethod(request)
 
   switch (method) {
+    // CREATE A NEW PROJECT
     case 'post': {
       const sessionId = parseFormNumber(body, 'sessionId')
       const grade = body.get('grade')
@@ -61,6 +57,7 @@ export let action: ActionFunction = async ({ request }) => {
 
       return json({ session: sessionWithNewProject.projects })
     }
+    // DELETE A PROJECT
     case 'delete': {
       const projectId = parseFormNumber(body, 'id')
 
@@ -70,6 +67,7 @@ export let action: ActionFunction = async ({ request }) => {
       await prisma.project.delete({ where: { id: projectId } })
       return json({ delete: true })
     }
+    // UPDATE NUMBER OF ATTEMPTS ON PROJECT
     case 'patch': {
       const projectId = parseFormNumber(body, 'id')
       const attempts = parseFormNumber(body, 'attempts')
@@ -86,7 +84,7 @@ export let action: ActionFunction = async ({ request }) => {
         where: { id: projectId },
         data: { attempts },
       })
-      return json({ delete: true })
+      return json({ attempts })
     }
     default: {
       return json({ message: `Unsupported method ${method}` }, 501)
@@ -218,7 +216,7 @@ type GradeProps = {
 function Grade({ sessionId, grade, projects }: GradeProps) {
   return (
     <div className="py-8">
-      <FormWithHiddenMethod method="post">
+      <FormWithHiddenMethod method="post" replace>
         <input type="hidden" name="sessionId" value={sessionId} />
         <input type="hidden" name="grade" value={grade} />
         <button
@@ -235,7 +233,7 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
       <p className="pt-2 text-xl text-gray-400">Attempts</p>
       <ul>
         {projects.map(({ id, attempts }) => (
-          <li key={id} className="flex justify-between">
+          <li key={id} className="flex items-center justify-between">
             <AttemptsControl projectId={id} attempts={attempts} />
             <RemoveProjectButton projectId={id} />
           </li>
@@ -291,8 +289,8 @@ type AttemptsControlProps = { projectId: number; attempts: number }
 function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
   const atMinAttempts = attempts === 1
   return (
-    <div className="flex items-center py-4 space-x-6">
-      <FormWithHiddenMethod method="patch">
+    <div className="flex items-center py-4 justify-between w-48">
+      <FormWithHiddenMethod method="patch" replace>
         <input type="hidden" name="attempts" value={attempts - 1} />
         <input type="hidden" name="id" value={projectId} />
         <button className="group" disabled={atMinAttempts}>
@@ -301,7 +299,7 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
         </button>
       </FormWithHiddenMethod>
       <span className="text-3xl font-semibold text-gray-700">{attempts}</span>
-      <FormWithHiddenMethod method="patch">
+      <FormWithHiddenMethod method="patch" replace>
         <input type="hidden" name="attempts" value={attempts + 1} />
         <input type="hidden" name="id" value={projectId} />
         <button className="group" name="this" value="butts" type="submit">
@@ -316,7 +314,7 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
 type RemoveProjectButtonProps = { projectId: number }
 function RemoveProjectButton({ projectId }: RemoveProjectButtonProps) {
   return (
-    <FormWithHiddenMethod method="delete">
+    <FormWithHiddenMethod method="delete" replace>
       <input type="hidden" name="id" value={projectId} />
       <button type="submit" className="group">
         <VisuallyHidden>remove project</VisuallyHidden>
