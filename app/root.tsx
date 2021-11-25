@@ -27,7 +27,7 @@ function Document({
       <body className="text-gray-900">
         {children}
         <ScrollRestoration />
-        {/* <Scripts /> */}
+        <Scripts />
         {process.env.NODE_ENV === 'development' && <LiveReload />}
       </body>
     </html>

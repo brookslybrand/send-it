@@ -1,10 +1,11 @@
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
-import { json, useLoaderData } from 'remix'
+import { json, useLoaderData, useTransition } from 'remix'
 import { prisma, Serialized } from '~/db'
 import { FormWithHiddenMethod, getMethod } from '~/utils/form'
 import type { Project, Session } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
+import { sleep } from '~/utils/sleep.server'
 
 export let meta: MetaFunction = () => {
   return {
@@ -17,21 +18,17 @@ function parseFormNumber(body: FormData, key: string) {
   return body.has(key) ? Number(body.get(key)) : NaN
 }
 
-function sleep(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
-
 export let action: ActionFunction = async ({ request }) => {
   let body = await request.formData()
-  const method = await getMethod(request)
+  let method = await getMethod(request)
+
+  console.log(body)
 
   switch (method) {
     // CREATE A NEW PROJECT
     case 'post': {
-      const sessionId = parseFormNumber(body, 'sessionId')
-      const grade = body.get('grade')
+      let sessionId = parseFormNumber(body, 'sessionId')
+      let grade = body.get('grade')
 
       if (Number.isNaN(sessionId)) {
         return json({ message: 'No session ID provided' }, 400)
@@ -39,7 +36,7 @@ export let action: ActionFunction = async ({ request }) => {
         return json({ message: 'Invalid grade' }, 400)
       }
 
-      const sessionWithNewProject = await prisma.session.update({
+      let sessionWithNewProject = await prisma.session.update({
         where: {
           id: sessionId,
         },
@@ -59,7 +56,7 @@ export let action: ActionFunction = async ({ request }) => {
     }
     // DELETE A PROJECT
     case 'delete': {
-      const projectId = parseFormNumber(body, 'id')
+      let projectId = parseFormNumber(body, 'id')
 
       if (Number.isNaN(projectId)) {
         return json({ message: 'No project ID provided' }, 400)
@@ -69,8 +66,8 @@ export let action: ActionFunction = async ({ request }) => {
     }
     // UPDATE NUMBER OF ATTEMPTS ON PROJECT
     case 'patch': {
-      const projectId = parseFormNumber(body, 'id')
-      const attempts = parseFormNumber(body, 'attempts')
+      let projectId = parseFormNumber(body, 'id')
+      let attempts = parseFormNumber(body, 'attempts')
 
       await sleep(1000)
 
@@ -78,7 +75,14 @@ export let action: ActionFunction = async ({ request }) => {
         return json({ message: 'No project ID provided' }, 400)
       }
       if (Number.isNaN(attempts)) {
-        return json({ message: 'No project ID provided' }, 400)
+        return json(
+          {
+            message: `Invalid attempts provided provided: ${body.get(
+              'attempts'
+            )}`,
+          },
+          400
+        )
       }
       await prisma.project.update({
         where: { id: projectId },
@@ -140,7 +144,7 @@ export let loader: LoaderFunction = async () => {
     })
   }
 
-  const result: LoaderData = { session }
+  let result: LoaderData = { session }
   return json(result)
 }
 
@@ -287,28 +291,64 @@ function isGrade(grade: any): grade is Grade {
 
 type AttemptsControlProps = { projectId: number; attempts: number }
 function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
-  const atMinAttempts = attempts === 1
+  let pendingAttempts = usePendingAttempts(attempts)
+
+  let atMinAttempts = attempts <= 1
   return (
     <div className="flex items-center py-4 justify-between w-48">
       <FormWithHiddenMethod method="patch" replace>
-        <input type="hidden" name="attempts" value={attempts - 1} />
         <input type="hidden" name="id" value={projectId} />
-        <button className="group" disabled={atMinAttempts}>
+        <input type="hidden" name="attempts" value={pendingAttempts - 1} />
+
+        <button
+          className="group"
+          type="submit"
+          // TODO: Implement when bug is fixed in remix
+          // name="attempts"
+          // value={pendingAttempts - 1}
+          disabled={atMinAttempts}
+        >
           <VisuallyHidden>decrease attempts</VisuallyHidden>
           <MinusIcon disabled={atMinAttempts} />
         </button>
       </FormWithHiddenMethod>
-      <span className="text-3xl font-semibold text-gray-700">{attempts}</span>
+
+      <span className="text-3xl font-semibold text-gray-700">
+        {pendingAttempts}
+      </span>
+
       <FormWithHiddenMethod method="patch" replace>
-        <input type="hidden" name="attempts" value={attempts + 1} />
         <input type="hidden" name="id" value={projectId} />
-        <button className="group" name="this" value="butts" type="submit">
+        <input type="hidden" name="attempts" value={pendingAttempts + 1} />
+        <button
+          className="group"
+          type="submit"
+          name="attempts"
+          value={pendingAttempts + 1}
+        >
           <VisuallyHidden>increase attempts</VisuallyHidden>
           <PlusIcon />
         </button>
       </FormWithHiddenMethod>
     </div>
   )
+}
+
+/**
+ * Gets the number of attempts currently being submitted to the project.
+ * This allows users to click multiple times in a row and have all of their actions submitted
+ * @param attempts
+ * @returns
+ */
+function usePendingAttempts(attempts: number) {
+  let { submission } = useTransition()
+  let body = submission?.formData
+
+  // return the original attempts if there is no submission
+  // otherwise return the pending attempts
+  if (!body) return attempts
+  let pendingAttempts = parseFormNumber(body, 'attempts')
+  return Number.isNaN(pendingAttempts) ? attempts : pendingAttempts
 }
 
 type RemoveProjectButtonProps = { projectId: number }
@@ -415,4 +455,4 @@ function attemptIconClassName(disabled: boolean) {
   )
 }
 
-const iconBase = 'h-16 w-16 stroke-1 group-active:stroke-2'
+let iconBase = 'h-16 w-16 stroke-1 group-active:stroke-2'
