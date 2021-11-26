@@ -124,7 +124,11 @@ export let loader: LoaderFunction = async () => {
       status: 'inProgress',
     },
     include: {
-      projects: true,
+      projects: {
+        orderBy: {
+          createdAt: 'desc',
+        },
+      },
     },
   })
 
@@ -139,7 +143,11 @@ export let loader: LoaderFunction = async () => {
         },
       },
       include: {
-        projects: true,
+        projects: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
       },
     })
   }
@@ -164,50 +172,49 @@ export default function NewSession() {
 
       <section className="py-16 space-y-8">
         <DateTimeInput
-          id="start-time"
           name="start-time"
           label="Start Time"
           defaultValue={session.startTime}
         />
         <DateTimeInput
-          id="end-time"
           name="end-time"
           label="End Time"
           defaultValue={session.endTime}
         />
-        {grades.map((grade) => (
-          <Grade
-            key={grade}
-            sessionId={session.id}
-            grade={grade}
-            projects={projectsByGrade[grade]}
-          />
-        ))}
+        <section
+          // apply a negative margin to account for the space inside of the svg circles
+          className="-mr-4"
+        >
+          {grades.map((grade) => (
+            <Grade
+              key={grade}
+              sessionId={session.id}
+              grade={grade}
+              projects={projectsByGrade[grade]}
+            />
+          ))}
+        </section>
       </section>
     </main>
   )
 }
 
 type DateTimeInputProps = {
-  id: string
   name: string
   label: string
   defaultValue?: string | null | undefined
 }
-function DateTimeInput({ id, name, label, defaultValue }: DateTimeInputProps) {
+function DateTimeInput({ name, label, defaultValue }: DateTimeInputProps) {
   return (
-    <div className="flex flex-col">
-      <label className="text-2xl font-bold" htmlFor={id}>
-        {label}
-      </label>
+    <label className="flex flex-col text-2xl text-green-600 hover:text-green-800 active:text-green-900 font-bold">
+      <span>{label}</span>
       <input
-        className="text-2xl mt-4"
-        id={id}
+        className="font-normal mt-2"
         name={name}
         type="datetime-local"
         defaultValue={defaultValue ?? undefined}
       />
-    </div>
+    </label>
   )
 }
 
