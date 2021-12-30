@@ -203,7 +203,7 @@ type DateTimeInputProps = {
 }
 function DateTimeInput({ name, label, defaultValue }: DateTimeInputProps) {
   return (
-    <label className="flex flex-col text-xl text-green-600 hover:text-green-800 active:text-green-900 font-bold">
+    <label className="flex flex-col text-xl text-emerald-600 hover:text-emerald-800 active:text-emerald-900 font-bold">
       <span>{label}</span>
       <input
         // apply a padding to line up with the icons
@@ -232,7 +232,7 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
           type="submit"
           className={clsx(
             'text-2xl font-bold w-full flex justify-between items-center',
-            'text-green-600 hover:text-green-800 active:text-green-900 group'
+            'text-emerald-600 hover:text-emerald-800 active:text-emerald-900 group'
           )}
         >
           <span>{createGradeLabel(grade)}</span>
@@ -455,8 +455,8 @@ function RemoveIcon() {
 function attemptIconClassName(disabled: boolean) {
   return clsx(
     iconBase,
-    'text-green-800 text-opacity-50 group-disabled:text-green-200',
-    !disabled ? 'group-hover:text-green-600 ' : ''
+    'text-emerald-800 text-opacity-50 group-disabled:text-emerald-200',
+    !disabled ? 'group-hover:text-emerald-600 ' : ''
   )
 }
 
