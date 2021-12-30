@@ -2,7 +2,7 @@ import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
 import { json, useLoaderData, useTransition } from 'remix'
 import { prisma, Serialized } from '~/db'
-import { FormWithHiddenMethod, getMethod } from '~/utils/form'
+import { FormWithHiddenMethod, addMethodToFormData } from '~/utils/form'
 import type { Project, Session } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
 import { sleep } from '~/utils/sleep.server'
@@ -19,10 +19,8 @@ function parseFormNumber(body: FormData, key: string) {
 }
 
 export let action: ActionFunction = async ({ request }) => {
-  let body = await request.formData()
-  let method = await getMethod(request)
-
-  console.log(body)
+  let body = await addMethodToFormData(request)
+  let method = body.get('method')
 
   switch (method) {
     // CREATE A NEW PROJECT
@@ -296,9 +294,10 @@ function isGrade(grade: any): grade is Grade {
 
 type AttemptsControlProps = { projectId: number; attempts: number }
 function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
-  let pendingAttempts = usePendingAttempts(attempts)
+  let pendingAttempts = usePendingAttempts(projectId, attempts)
 
   let atMinAttempts = attempts <= 1
+  console.log({ atMinAttempts })
   return (
     <div className="flex items-center py-4 space-x-4">
       <FormWithHiddenMethod method="patch" replace>
@@ -345,13 +344,16 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
  * @param attempts
  * @returns
  */
-function usePendingAttempts(attempts: number) {
+function usePendingAttempts(projectId: number, attempts: number) {
   let { submission } = useTransition()
   let body = submission?.formData
 
   // return the original attempts if there is no submission
   // otherwise return the pending attempts
   if (!body) return attempts
+  if (parseFormNumber(body, 'id') !== projectId) {
+    return attempts
+  }
   let pendingAttempts = parseFormNumber(body, 'attempts')
   return Number.isNaN(pendingAttempts) ? attempts : pendingAttempts
 }

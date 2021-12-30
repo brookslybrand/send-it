@@ -23,10 +23,12 @@ export function FormWithHiddenMethod({
 }
 
 /**
- * Get the method from the hidden input carrying the true method if it exists, defaulting to the form's method
- * @param body
+ * Get the method from the hidden input carrying the true method if it exists,
+ * defaulting to the form's method, and attach this to the form data
+ * Note: This method calls `request.formData()` and will fail if this is called
+ * before invoking this function
  */
-export async function getMethod(request: Request): Promise<FormMethod> {
+export async function addMethodToFormData(request: Request): Promise<FormData> {
   // I'm not sure if this will slow down requests much, since `.formData()` will likely be called outside this function
   let body = await request.formData()
   let method = body.get(hiddenMethodName) ?? request.method
@@ -41,7 +43,9 @@ export async function getMethod(request: Request): Promise<FormMethod> {
     throw new Error(`Invalid method: ${method}`)
   }
 
-  return lowerCaseMethod
+  body.append('method', lowerCaseMethod)
+
+  return body
 }
 
 /**
