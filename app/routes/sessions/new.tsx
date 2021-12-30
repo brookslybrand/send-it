@@ -167,8 +167,8 @@ export default function NewSession() {
   }
 
   return (
-    <main className="flex flex-col w-1/2 m-auto p-8">
-      <h1 className="text-6xl text-center">New Session</h1>
+    <main className="flex flex-col lg:w-1/2 m-auto p-8">
+      <h1 className="text-4xl text-center">New Session</h1>
 
       <section className="py-16 space-y-8">
         <DateTimeInput
@@ -181,10 +181,7 @@ export default function NewSession() {
           label="End Time"
           defaultValue={session.endTime}
         />
-        <section
-          // apply a negative margin to account for the space inside of the svg circles
-          className="-mr-4"
-        >
+        <section>
           {grades.map((grade) => (
             <Grade
               key={grade}
@@ -206,10 +203,11 @@ type DateTimeInputProps = {
 }
 function DateTimeInput({ name, label, defaultValue }: DateTimeInputProps) {
   return (
-    <label className="flex flex-col text-2xl text-green-600 hover:text-green-800 active:text-green-900 font-bold">
+    <label className="flex flex-col text-xl text-green-600 hover:text-green-800 active:text-green-900 font-bold">
       <span>{label}</span>
       <input
-        className="font-normal mt-2"
+        // apply a padding to line up with the icons
+        className="font-normal mt-2 pr-2"
         name={name}
         type="datetime-local"
         defaultValue={defaultValue ?? undefined}
@@ -233,7 +231,7 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
         <button
           type="submit"
           className={clsx(
-            'text-3xl font-bold w-full flex justify-between items-center',
+            'text-2xl font-bold w-full flex justify-between items-center',
             'text-green-600 hover:text-green-800 active:text-green-900 group'
           )}
         >
@@ -302,7 +300,7 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
 
   let atMinAttempts = attempts <= 1
   return (
-    <div className="flex items-center py-4 justify-between w-48">
+    <div className="flex items-center py-4 space-x-4">
       <FormWithHiddenMethod method="patch" replace>
         <input type="hidden" name="id" value={projectId} />
         <input type="hidden" name="attempts" value={pendingAttempts - 1} />
@@ -392,7 +390,7 @@ function ProjectIcon({ count }: { count: number }) {
         />
       </svg>
       {/* Note: this will break visually if there is a 3 digit number */}
-      <span className="text-3xl font-semibold absolute text-center leading-[0px] w-full inset-0 top-1/2">
+      <span className="text-2xl font-semibold absolute text-center leading-[0px] w-full inset-0 top-1/2">
         {count}
       </span>
     </div>
@@ -462,4 +460,4 @@ function attemptIconClassName(disabled: boolean) {
   )
 }
 
-let iconBase = 'h-16 w-16 stroke-1 group-active:stroke-2'
+let iconBase = 'h-12 w-12 stroke-1 group-active:stroke-2'
