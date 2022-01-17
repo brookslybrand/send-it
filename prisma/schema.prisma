@@ -25,14 +25,29 @@ model Session {
   createdAt DateTime  @default(now())
   User      User?     @relation(fields: [userId], references: [id])
   userId    Int?
-  status    String // enum: 'inProgress', 'complete'
+  status    Status
+}
+
+enum Status {
+  inProgress
+  complete
 }
 
 model Project {
   id        Int      @id @default(autoincrement())
-  grade     String
+  grade     Grade
   attempts  Int      @default(1)
   createdAt DateTime @default(now())
   Session   Session? @relation(fields: [sessionId], references: [id])
   sessionId Int?
+}
+
+enum Grade {
+  vb_v0
+  v1_v2
+  v3_v4
+  v5_v6
+  v7_v8
+  v9_v10
+  v11_
 }
