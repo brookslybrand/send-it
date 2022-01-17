@@ -1,6 +1,7 @@
 import { Form, FormMethod } from 'remix'
 
 import type { FormProps } from 'remix'
+import { useHydrated } from './client-only'
 
 const hiddenMethodName = '_method'
 
@@ -9,8 +10,10 @@ export function FormWithHiddenMethod({
   children,
   ...props
 }: FormProps) {
+  const isHydrated = useHydrated()
   return (
-    <Form method={getValidMethod(method)} {...props}>
+    // use the valid method if we're using JS, otherwise default to either POST or GET
+    <Form method={isHydrated ? method : getValidMethod(method)} {...props}>
       {
         // add a hidden input for non `get` and `post` methods
         method && ['put', 'patch', 'delete'].includes(method) ? (

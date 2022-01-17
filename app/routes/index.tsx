@@ -1,6 +1,6 @@
 import { MetaFunction, LoaderFunction, Link } from 'remix'
 import { useLoaderData } from 'remix'
-import { prisma } from '~/db'
+import { db } from '~/db'
 import { User } from '.prisma/client'
 
 export let meta: MetaFunction = () => {
@@ -11,7 +11,7 @@ export let meta: MetaFunction = () => {
 }
 
 async function getUsers() {
-  const users = await prisma.user.findMany()
+  const users = await db.user.findMany()
   return users.map(({ id, name }) => ({ id, name }))
 }
 
@@ -36,6 +36,7 @@ export default function Index() {
         ))}
       </ol>
 
+      {/* TODO: Use useTransition to show a loading indicator if this is taking a little while */}
       <Link
         className="block text-2xl mt-6 text-blue-800 hover:text-blue-400"
         to="sessions/new"

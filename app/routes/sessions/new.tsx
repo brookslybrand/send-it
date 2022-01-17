@@ -1,11 +1,10 @@
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
 import { json, useLoaderData, useTransition } from 'remix'
-import { prisma, Serialized } from '~/db'
+import { db, Serialized } from '~/db'
 import { FormWithHiddenMethod, addMethodToFormData } from '~/utils/form'
-import type { Project, Session } from '.prisma/client'
+import type { Project, Session, Grade } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
-import { sleep } from '~/utils/sleep.server'
 
 export let meta: MetaFunction = () => {
   return {
@@ -34,7 +33,7 @@ export let action: ActionFunction = async ({ request }) => {
         return json({ message: 'Invalid grade' }, 400)
       }
 
-      let sessionWithNewProject = await prisma.session.update({
+      let sessionWithNewProject = await db.session.update({
         where: {
           id: sessionId,
         },
@@ -59,7 +58,7 @@ export let action: ActionFunction = async ({ request }) => {
       if (Number.isNaN(projectId)) {
         return json({ message: 'No project ID provided' }, 400)
       }
-      await prisma.project.delete({ where: { id: projectId } })
+      await db.project.delete({ where: { id: projectId } })
       return json({ delete: true })
     }
     // UPDATE NUMBER OF ATTEMPTS ON PROJECT
@@ -67,7 +66,7 @@ export let action: ActionFunction = async ({ request }) => {
       let projectId = parseFormNumber(body, 'id')
       let attempts = parseFormNumber(body, 'attempts')
 
-      await sleep(1000)
+      // await sleep(1000)
 
       if (Number.isNaN(projectId)) {
         return json({ message: 'No project ID provided' }, 400)
@@ -82,7 +81,7 @@ export let action: ActionFunction = async ({ request }) => {
           400
         )
       }
-      await prisma.project.update({
+      await db.project.update({
         where: { id: projectId },
         data: { attempts },
       })
@@ -102,7 +101,7 @@ type LoaderData = {
 
 export let loader: LoaderFunction = async () => {
   // TODO: Get the authenticated user, not just me every time
-  let user = await prisma.user.findUnique({
+  let user = await db.user.findUnique({
     where: {
       email: 'brookslybrand@gmail.com',
     },
@@ -116,7 +115,7 @@ export let loader: LoaderFunction = async () => {
   }
 
   // find the current in progress session; create one if it doesn't exist
-  let session = await prisma.session.findFirst({
+  let session = await db.session.findFirst({
     where: {
       userId: user.id,
       status: 'inProgress',
@@ -131,7 +130,7 @@ export let loader: LoaderFunction = async () => {
   })
 
   if (session === null) {
-    session = await prisma.session.create({
+    session = await db.session.create({
       data: {
         status: 'inProgress',
         User: {
@@ -156,6 +155,7 @@ export let loader: LoaderFunction = async () => {
 
 export default function NewSession() {
   let { session } = useLoaderData<Serialized<LoaderData>>()
+  let pendingProjectGrade = usePendingAddProject()
 
   let projectsByGrade = createEmptyProjects()
   for (let project of session.projects) {
@@ -181,11 +181,12 @@ export default function NewSession() {
         />
         <section>
           {grades.map((grade) => (
-            <Grade
+            <GradeControl
               key={grade}
               sessionId={session.id}
               grade={grade}
               projects={projectsByGrade[grade]}
+              disabled={pendingProjectGrade === grade}
             />
           ))}
         </section>
@@ -214,13 +215,19 @@ function DateTimeInput({ name, label, defaultValue }: DateTimeInputProps) {
   )
 }
 
-type GradeProps = {
+type GradeControlProps = {
   sessionId: number
   grade: Grade
   projects: Project[]
+  disabled: boolean
 }
 
-function Grade({ sessionId, grade, projects }: GradeProps) {
+function GradeControl({
+  sessionId,
+  grade,
+  projects,
+  disabled,
+}: GradeControlProps) {
   return (
     <div className="py-8">
       <FormWithHiddenMethod method="post" replace>
@@ -230,8 +237,10 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
           type="submit"
           className={clsx(
             'text-2xl font-bold w-full flex justify-between items-center',
-            'text-emerald-600 hover:text-emerald-800 active:text-emerald-900 group'
+            'text-emerald-600 hover:text-emerald-800 active:text-emerald-900 group',
+            'disabled:text-emerald-200'
           )}
+          disabled={disabled}
         >
           <span>{createGradeLabel(grade)}</span>
           <ProjectIcon count={projects.length} />
@@ -241,8 +250,12 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
       <ul>
         {projects.map(({ id, attempts }) => (
           <li key={id} className="flex items-center justify-between">
-            <AttemptsControl projectId={id} attempts={attempts} />
-            <RemoveProjectButton projectId={id} />
+            <AttemptsControl
+              projectId={id}
+              attempts={attempts}
+              disabled={disabled}
+            />
+            <RemoveProjectButton projectId={id} disabled={disabled} />
           </li>
         ))}
       </ul>
@@ -250,27 +263,41 @@ function Grade({ sessionId, grade, projects }: GradeProps) {
   )
 }
 
-type Grade = 'vb-v0' | 'v1-v2' | 'v3-v4' | 'v5-v6' | 'v7-v8' | 'v9-v10' | 'v11+'
+/**
+ * Detects whether a grade is being added
+ * @returns {Grade} The grade of the project being added
+ */
+function usePendingAddProject() {
+  let { submission } = useTransition()
+
+  let body = submission?.formData
+
+  if (!body) return null
+
+  const grade = body.get('grade')
+
+  return isGrade(grade) ? grade : null
+}
 
 let gradeToLabel: Record<Grade, string> = {
-  'vb-v0': 'VB - V0',
-  'v1-v2': 'V1 - V2',
-  'v3-v4': 'V3 - V4',
-  'v5-v6': 'V5 - V6',
-  'v7-v8': 'V7 - V8',
-  'v9-v10': 'V9 - V10',
-  'v11+': 'V11+',
+  vb_v0: 'VB - V0',
+  v1_v2: 'V1 - V2',
+  v3_v4: 'V3 - V4',
+  v5_v6: 'V5 - V6',
+  v7_v8: 'V7 - V8',
+  v9_v10: 'V9 - V10',
+  v11_: 'V11+',
 }
 
 function createEmptyProjects(): { [key in Grade]: Project[] } {
   return {
-    'vb-v0': [],
-    'v1-v2': [],
-    'v3-v4': [],
-    'v5-v6': [],
-    'v7-v8': [],
-    'v9-v10': [],
-    'v11+': [],
+    vb_v0: [],
+    v1_v2: [],
+    v3_v4: [],
+    v5_v6: [],
+    v7_v8: [],
+    v9_v10: [],
+    v11_: [],
   }
 }
 
@@ -292,12 +319,19 @@ function isGrade(grade: any): grade is Grade {
   return gradesSet.has(grade)
 }
 
-type AttemptsControlProps = { projectId: number; attempts: number }
-function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
+type AttemptsControlProps = {
+  projectId: number
+  attempts: number
+  disabled: boolean
+}
+function AttemptsControl({
+  projectId,
+  attempts,
+  disabled,
+}: AttemptsControlProps) {
   let pendingAttempts = usePendingAttempts(projectId, attempts)
 
-  let atMinAttempts = attempts <= 1
-  console.log({ atMinAttempts })
+  let atMinAttempts = (pendingAttempts ?? attempts) <= 1
   return (
     <div className="flex items-center py-4 space-x-4">
       <FormWithHiddenMethod method="patch" replace>
@@ -310,10 +344,10 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
           // TODO: Implement when bug is fixed in remix
           // name="attempts"
           // value={pendingAttempts - 1}
-          disabled={atMinAttempts}
+          disabled={disabled || atMinAttempts}
         >
           <VisuallyHidden>decrease attempts</VisuallyHidden>
-          <MinusIcon disabled={atMinAttempts} />
+          <MinusIcon />
         </button>
       </FormWithHiddenMethod>
 
@@ -329,6 +363,7 @@ function AttemptsControl({ projectId, attempts }: AttemptsControlProps) {
           type="submit"
           name="attempts"
           value={pendingAttempts + 1}
+          disabled={disabled}
         >
           <VisuallyHidden>increase attempts</VisuallyHidden>
           <PlusIcon />
@@ -358,12 +393,15 @@ function usePendingAttempts(projectId: number, attempts: number) {
   return Number.isNaN(pendingAttempts) ? attempts : pendingAttempts
 }
 
-type RemoveProjectButtonProps = { projectId: number }
-function RemoveProjectButton({ projectId }: RemoveProjectButtonProps) {
+type RemoveProjectButtonProps = { projectId: number; disabled: boolean }
+function RemoveProjectButton({
+  projectId,
+  disabled,
+}: RemoveProjectButtonProps) {
   return (
     <FormWithHiddenMethod method="delete" replace>
       <input type="hidden" name="id" value={projectId} />
-      <button type="submit" className="group">
+      <button type="submit" className="group" disabled={disabled}>
         <VisuallyHidden>remove project</VisuallyHidden>
         <RemoveIcon />
       </button>
@@ -371,13 +409,9 @@ function RemoveProjectButton({ projectId }: RemoveProjectButtonProps) {
   )
 }
 
-type IconProps = {
-  disabled?: boolean
-}
-
 function ProjectIcon({ count }: { count: number }) {
   return (
-    <div className="relative group-active:text-blue-400">
+    <div className="relative group-active:text-emerald-900">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         className={clsx(iconBase, 'group-active:stroke-[2px]')}
@@ -399,11 +433,11 @@ function ProjectIcon({ count }: { count: number }) {
   )
 }
 
-function MinusIcon({ disabled = false }: IconProps) {
+function MinusIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className={attemptIconClassName(disabled)}
+      className={attemptIconClassName}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -417,11 +451,11 @@ function MinusIcon({ disabled = false }: IconProps) {
   )
 }
 
-function PlusIcon({ disabled = false }: IconProps) {
+function PlusIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className={attemptIconClassName(disabled)}
+      className={attemptIconClassName}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -440,7 +474,10 @@ function RemoveIcon() {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      className={clsx(iconBase, 'text-red-500 group-hover:text-red-700')}
+      className={clsx(
+        iconBase,
+        'text-red-500 group-hover:text-red-700 group-disabled:text-red-200'
+      )}
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
@@ -454,12 +491,10 @@ function RemoveIcon() {
   )
 }
 
-function attemptIconClassName(disabled: boolean) {
-  return clsx(
-    iconBase,
-    'text-emerald-800 text-opacity-50 group-disabled:text-emerald-200',
-    !disabled ? 'group-hover:text-emerald-600 ' : ''
-  )
-}
+let iconBase =
+  'h-12 w-12 stroke-1 group-active:stroke-2 group-disabled:stroke-1'
 
-let iconBase = 'h-12 w-12 stroke-1 group-active:stroke-2'
+let attemptIconClassName = clsx(
+  iconBase,
+  'text-emerald-800 text-opacity-50 group-disabled:text-emerald-200 group-hover:text-emerald-600'
+)
