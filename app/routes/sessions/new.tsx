@@ -62,11 +62,10 @@ export let action: ActionFunction = async ({ request }) => {
       return json({ delete: true })
     }
     // UPDATE NUMBER OF ATTEMPTS ON PROJECT
+    // TODO: Fix race condition when subtracting vs adding values
     case 'patch': {
       let projectId = parseFormNumber(body, 'id')
       let attempts = parseFormNumber(body, 'attempts')
-
-      // await sleep(1000)
 
       if (Number.isNaN(projectId)) {
         return json({ message: 'No project ID provided' }, 400)
@@ -155,7 +154,7 @@ export let loader: LoaderFunction = async () => {
 
 export default function NewSession() {
   let { session } = useLoaderData<Serialized<LoaderData>>()
-  let pendingProjectGrade = usePendingAddProject()
+  let disabledGrade = useDisableGrade()
 
   let projectsByGrade = createEmptyProjects()
   for (let project of session.projects) {
@@ -186,7 +185,7 @@ export default function NewSession() {
               sessionId={session.id}
               grade={grade}
               projects={projectsByGrade[grade]}
-              disabled={pendingProjectGrade === grade}
+              disabled={grade === disabledGrade}
             />
           ))}
         </section>
@@ -264,19 +263,45 @@ function GradeControl({
 }
 
 /**
- * Detects whether a grade is being added
- * @returns {Grade} The grade of the project being added
+ * Detects if any grades and all of it's project controls should be disabled
+ * @returns The grade to be disabled, or null if none
  */
-function usePendingAddProject() {
+function useDisableGrade(): null | Grade {
+  let { session } = useLoaderData<Serialized<LoaderData>>()
   let { submission } = useTransition()
 
   let body = submission?.formData
 
   if (!body) return null
+  console.log([...body.entries()])
 
-  const grade = body.get('grade')
+  // if a new project is being added, disable all controls
+  let grade = body.get('grade')
+  if (isGrade(grade)) {
+    return grade
+  }
 
-  return isGrade(grade) ? grade : null
+  // if a project is being deleted, disable all controls
+  let method = body.get('_method')
+  let id = parseFormNumber(body, 'id')
+  if (Number.isNaN(id)) return null
+
+  if (method === 'delete') {
+    const projectBeingDeleted = session.projects.find(
+      (project) => project.id === id
+    )
+    return projectBeingDeleted ? projectBeingDeleted.grade : null
+  }
+
+  // Not sure if I want to disable everything when changing the number of attempts 🤔˝
+  // if (method === 'patch') {
+  //   const projectBeingEdited = session.projects.find(
+  //     (project) => project.id === id
+  //   )
+  //   return projectBeingEdited ? projectBeingEdited.grade : null
+  // }
+
+  return null
 }
 
 let gradeToLabel: Record<Grade, string> = {
