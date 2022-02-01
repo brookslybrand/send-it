@@ -1,8 +1,12 @@
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
-import { json, useLoaderData, useTransition } from 'remix'
+import { json, useFetcher, useLoaderData, useTransition } from 'remix'
 import { db, Serialized } from '~/db'
-import { FormWithHiddenMethod, addMethodToFormData } from '~/utils/form'
+import {
+  FormWithHiddenMethod,
+  addMethodToFormData,
+  useHiddenMethod,
+} from '~/utils/form'
 import type { Project, Session, Grade } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
 
@@ -62,7 +66,6 @@ export let action: ActionFunction = async ({ request }) => {
       return json({ delete: true })
     }
     // UPDATE NUMBER OF ATTEMPTS ON PROJECT
-    // TODO: Fix race condition when subtracting vs adding values
     case 'patch': {
       let projectId = parseFormNumber(body, 'id')
       let attempts = parseFormNumber(body, 'attempts')
@@ -205,7 +208,7 @@ function DateTimeInput({ name, label, defaultValue }: DateTimeInputProps) {
       <span>{label}</span>
       <input
         // apply a padding to line up with the icons
-        className="font-normal mt-2 pr-2"
+        className="font-normal text-gray-800 mt-2 pr-2"
         name={name}
         type="datetime-local"
         defaultValue={defaultValue ?? undefined}
@@ -273,7 +276,6 @@ function useDisableGrade(): null | Grade {
   let body = submission?.formData
 
   if (!body) return null
-  console.log([...body.entries()])
 
   // if a new project is being added, disable all controls
   let grade = body.get('grade')
@@ -292,14 +294,6 @@ function useDisableGrade(): null | Grade {
     )
     return projectBeingDeleted ? projectBeingDeleted.grade : null
   }
-
-  // Not sure if I want to disable everything when changing the number of attempts 🤔˝
-  // if (method === 'patch') {
-  //   const projectBeingEdited = session.projects.find(
-  //     (project) => project.id === id
-  //   )
-  //   return projectBeingEdited ? projectBeingEdited.grade : null
-  // }
 
   return null
 }
@@ -354,68 +348,47 @@ function AttemptsControl({
   attempts,
   disabled,
 }: AttemptsControlProps) {
-  let pendingAttempts = usePendingAttempts(projectId, attempts)
+  let fetcher = useFetcher()
+  let [method, HiddenMethodInput] = useHiddenMethod('patch')
 
-  let atMinAttempts = (pendingAttempts ?? attempts) <= 1
+  let body = fetcher.submission?.formData
+  let displayAttempts = body ? parseFormNumber(body, 'attempts') : attempts
+
+  let atMinAttempts = displayAttempts <= 1
+
   return (
-    <div className="flex items-center py-4 space-x-4">
-      <FormWithHiddenMethod method="patch" replace>
-        <input type="hidden" name="id" value={projectId} />
-        <input type="hidden" name="attempts" value={pendingAttempts - 1} />
-
+    <fetcher.Form method={method} replace>
+      <HiddenMethodInput />
+      <input type="hidden" name="id" value={projectId} />
+      <div className="flex items-center py-4 space-x-4">
         <button
           className="group"
           type="submit"
-          // TODO: Implement when bug is fixed in remix
-          // name="attempts"
-          // value={pendingAttempts - 1}
+          name="attempts"
+          value={displayAttempts - 1}
           disabled={disabled || atMinAttempts}
         >
           <VisuallyHidden>decrease attempts</VisuallyHidden>
           <MinusIcon />
         </button>
-      </FormWithHiddenMethod>
 
-      <span className="text-3xl font-semibold text-gray-700">
-        {pendingAttempts}
-      </span>
+        <span className="text-3xl font-semibold text-gray-700">
+          {displayAttempts}
+        </span>
 
-      <FormWithHiddenMethod method="patch" replace>
-        <input type="hidden" name="id" value={projectId} />
-        <input type="hidden" name="attempts" value={pendingAttempts + 1} />
         <button
           className="group"
           type="submit"
           name="attempts"
-          value={pendingAttempts + 1}
+          value={displayAttempts + 1}
           disabled={disabled}
         >
           <VisuallyHidden>increase attempts</VisuallyHidden>
           <PlusIcon />
         </button>
-      </FormWithHiddenMethod>
-    </div>
+      </div>
+    </fetcher.Form>
   )
-}
-
-/**
- * Gets the number of attempts currently being submitted to the project.
- * This allows users to click multiple times in a row and have all of their actions submitted
- * @param attempts
- * @returns
- */
-function usePendingAttempts(projectId: number, attempts: number) {
-  let { submission } = useTransition()
-  let body = submission?.formData
-
-  // return the original attempts if there is no submission
-  // otherwise return the pending attempts
-  if (!body) return attempts
-  if (parseFormNumber(body, 'id') !== projectId) {
-    return attempts
-  }
-  let pendingAttempts = parseFormNumber(body, 'attempts')
-  return Number.isNaN(pendingAttempts) ? attempts : pendingAttempts
 }
 
 type RemoveProjectButtonProps = { projectId: number; disabled: boolean }

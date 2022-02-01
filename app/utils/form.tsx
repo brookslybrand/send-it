@@ -2,6 +2,7 @@ import { Form, FormMethod } from 'remix'
 
 import type { FormProps } from 'remix'
 import { useHydrated } from './client-only'
+import React from 'react'
 
 const hiddenMethodName = '_method'
 
@@ -10,19 +11,38 @@ export function FormWithHiddenMethod({
   children,
   ...props
 }: FormProps) {
-  const isHydrated = useHydrated()
+  const [validMethod, HiddenMethodInput] = useHiddenMethod(method)
   return (
     // use the valid method if we're using JS, otherwise default to either POST or GET
-    <Form method={isHydrated ? method : getValidMethod(method)} {...props}>
-      {
-        // add a hidden input for non `get` and `post` methods
-        method && ['put', 'patch', 'delete'].includes(method) ? (
-          <input type="hidden" name={hiddenMethodName} value={method} />
-        ) : null
-      }
+    <Form method={validMethod} {...props}>
+      <HiddenMethodInput />
       {children}
     </Form>
   )
+}
+
+type InputProps = React.DetailedHTMLProps<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  HTMLInputElement
+>
+
+/**
+ * Returns a valid method ('get' or 'post') and a hidden input element.
+ */
+export function useHiddenMethod(method: FormProps['method']) {
+  const isHydrated = useHydrated()
+  const validMethod = isHydrated ? method : getValidMethod(method)
+  //  hidden input for non `get` and `post` methods
+  const Input = (props: InputProps) =>
+    method && ['put', 'patch', 'delete'].includes(method) ? (
+      <input
+        {...props} // not sure why, but might want to be able to pass more props in
+        type="hidden"
+        name={hiddenMethodName}
+        value={method}
+      />
+    ) : null
+  return [validMethod, Input] as const
 }
 
 /**
