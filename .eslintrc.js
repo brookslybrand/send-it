@@ -3,9 +3,15 @@ module.exports = {
     node: true,
     es2021: true,
   },
+  settings: {
+    react: {
+      version: 'detect',
+    },
+  },
   extends: [
     'eslint:recommended',
     'plugin:react/recommended',
+    'plugin:react-hooks/recommended',
     'plugin:@typescript-eslint/recommended',
     'plugin:jsx-a11y/recommended',
   ],
@@ -22,5 +28,7 @@ module.exports = {
     'react/react-in-jsx-scope': 'off',
     'prefer-const': 'off',
     '@typescript-eslint/no-var-requires': 'off',
+    'react/display-name': 'off',
+    'react/prop-types': 'off',
   },
 }
