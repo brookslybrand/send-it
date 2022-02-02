@@ -1,6 +1,6 @@
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
-import { json, useFetcher, useLoaderData, useTransition } from 'remix'
+import { json, useLoaderData, useTransition } from 'remix'
 import {
   createProject,
   deleteProject,
@@ -10,7 +10,7 @@ import {
 import {
   FormWithHiddenMethod,
   addMethodToFormData,
-  useHiddenMethod,
+  useFetcherWithHiddenMethod,
 } from '~/utils/form'
 import type { Serialized } from '~/db'
 import type { Project, Session, Grade } from '.prisma/client'
@@ -291,8 +291,7 @@ function AttemptsControl({
   attempts,
   disabled,
 }: AttemptsControlProps) {
-  let fetcher = useFetcher()
-  let [method, HiddenMethodInput] = useHiddenMethod('patch')
+  let fetcher = useFetcherWithHiddenMethod()
 
   let body = fetcher.submission?.formData
   let displayAttempts = body ? parseFormNumber(body, 'attempts') : attempts
@@ -300,8 +299,7 @@ function AttemptsControl({
   let atMinAttempts = displayAttempts <= 1
 
   return (
-    <fetcher.Form method={method} replace>
-      <HiddenMethodInput />
+    <fetcher.Form method={'patch'} replace>
       <input type="hidden" name="id" value={projectId} />
       <div className="flex items-center py-4 space-x-4">
         <button

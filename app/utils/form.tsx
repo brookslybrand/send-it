@@ -1,8 +1,7 @@
-import { Form, FormMethod } from 'remix'
-
-import type { FormProps } from 'remix'
+import { forwardRef, useMemo } from 'react'
+import { Form, useFetcher } from 'remix'
+import type { FormMethod, FormProps } from 'remix'
 import { useHydrated } from './client-only'
-import React from 'react'
 
 const hiddenMethodName = '_method'
 
@@ -19,6 +18,28 @@ export function FormWithHiddenMethod({
       {children}
     </Form>
   )
+}
+
+export function useFetcherWithHiddenMethod<T>(): ReturnType<typeof useFetcher> {
+  let fetcher = useFetcher<T>()
+
+  let fetcherWithHiddenMethod = useMemo(() => {
+    let Form = forwardRef<HTMLFormElement, FormProps>(
+      ({ method, children, ...props }, ref) => {
+        let [validMethod, HiddenMethodInput] = useHiddenMethod(method)
+        return (
+          <fetcher.Form ref={ref} {...props} method={validMethod}>
+            <HiddenMethodInput />
+            {children}
+          </fetcher.Form>
+        )
+      }
+    )
+
+    return { ...fetcher, Form }
+  }, [fetcher])
+
+  return fetcherWithHiddenMethod
 }
 
 type InputProps = React.DetailedHTMLProps<
