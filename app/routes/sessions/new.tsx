@@ -1,12 +1,18 @@
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
 import { json, useFetcher, useLoaderData, useTransition } from 'remix'
-import { db, Serialized } from '~/db'
+import {
+  createProject,
+  deleteProject,
+  updateProjectAttempts,
+  findOrCreateInProgressSession,
+} from '~/db'
 import {
   FormWithHiddenMethod,
   addMethodToFormData,
   useHiddenMethod,
 } from '~/utils/form'
+import type { Serialized } from '~/db'
 import type { Project, Session, Grade } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
 
@@ -37,21 +43,7 @@ export let action: ActionFunction = async ({ request }) => {
         return json({ message: 'Invalid grade' }, 400)
       }
 
-      let sessionWithNewProject = await db.session.update({
-        where: {
-          id: sessionId,
-        },
-        data: {
-          projects: {
-            create: {
-              grade,
-            },
-          },
-        },
-        include: {
-          projects: true,
-        },
-      })
+      let sessionWithNewProject = await createProject(sessionId, grade)
 
       return json({ session: sessionWithNewProject.projects })
     }
@@ -62,7 +54,7 @@ export let action: ActionFunction = async ({ request }) => {
       if (Number.isNaN(projectId)) {
         return json({ message: 'No project ID provided' }, 400)
       }
-      await db.project.delete({ where: { id: projectId } })
+      await deleteProject(projectId)
       return json({ delete: true })
     }
     // UPDATE NUMBER OF ATTEMPTS ON PROJECT
@@ -83,10 +75,7 @@ export let action: ActionFunction = async ({ request }) => {
           400
         )
       }
-      await db.project.update({
-        where: { id: projectId },
-        data: { attempts },
-      })
+      await updateProjectAttempts(projectId, attempts)
       return json({ attempts })
     }
     default: {
@@ -103,53 +92,7 @@ type LoaderData = {
 
 export let loader: LoaderFunction = async () => {
   // TODO: Get the authenticated user, not just me every time
-  let user = await db.user.findUnique({
-    where: {
-      email: 'brookslybrand@gmail.com',
-    },
-    select: {
-      id: true,
-    },
-  })
-
-  if (!user?.id) {
-    throw new Error('User not found')
-  }
-
-  // find the current in progress session; create one if it doesn't exist
-  let session = await db.session.findFirst({
-    where: {
-      userId: user.id,
-      status: 'inProgress',
-    },
-    include: {
-      projects: {
-        orderBy: {
-          createdAt: 'desc',
-        },
-      },
-    },
-  })
-
-  if (session === null) {
-    session = await db.session.create({
-      data: {
-        status: 'inProgress',
-        User: {
-          connect: {
-            id: user.id,
-          },
-        },
-      },
-      include: {
-        projects: {
-          orderBy: {
-            createdAt: 'desc',
-          },
-        },
-      },
-    })
-  }
+  let session = await findOrCreateInProgressSession('brookslybrand@gmail.com')
 
   let result: LoaderData = { session }
   return json(result)
