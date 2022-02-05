@@ -1,20 +1,17 @@
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
-import { json, useLoaderData, useTransition } from 'remix'
+import { json, useFetcher, useLoaderData } from 'remix'
 import {
   createProject,
   deleteProject,
   updateProjectAttempts,
   findOrCreateInProgressSession,
 } from '~/db'
-import {
-  FormWithHiddenMethod,
-  addMethodToFormData,
-  useFetcherWithHiddenMethod,
-} from '~/utils/form'
+import { addMethodToFormData, useFetcherWithHiddenMethod } from '~/utils/form'
 import type { Serialized } from '~/db'
 import type { Project, Session, Grade } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
+import { useMemo } from 'react'
 
 export let meta: MetaFunction = () => {
   return {
@@ -100,14 +97,7 @@ export let loader: LoaderFunction = async () => {
 
 export default function NewSession() {
   let { session } = useLoaderData<Serialized<LoaderData>>()
-  let disabledGrade = useDisableGrade()
-
-  let projectsByGrade = createEmptyProjects()
-  for (let project of session.projects) {
-    let { grade } = project
-    if (!isGrade(grade)) throw new Error('Invalid grade')
-    projectsByGrade[grade].push(project)
-  }
+  let projectsByGrade = useProjectsByGrade(session.projects)
 
   return (
     <main className="flex flex-col lg:w-1/2 m-auto p-8">
@@ -131,13 +121,32 @@ export default function NewSession() {
               sessionId={session.id}
               grade={grade}
               projects={projectsByGrade[grade]}
-              disabled={grade === disabledGrade}
             />
           ))}
         </section>
       </section>
     </main>
   )
+}
+
+function useProjectsByGrade(projects: Project[]) {
+  return useMemo(() => {
+    let projectsByGrade: { [key in Grade]: Project[] } = {
+      vb_v0: [],
+      v1_v2: [],
+      v3_v4: [],
+      v5_v6: [],
+      v7_v8: [],
+      v9_v10: [],
+      v11_: [],
+    }
+    for (let project of projects) {
+      let { grade } = project
+      if (!isGrade(grade)) throw new Error('Invalid grade')
+      projectsByGrade[grade].push(project)
+    }
+    return projectsByGrade
+  }, [projects])
 }
 
 type DateTimeInputProps = {
@@ -164,18 +173,15 @@ type GradeControlProps = {
   sessionId: number
   grade: Grade
   projects: Project[]
-  disabled: boolean
 }
 
-function GradeControl({
-  sessionId,
-  grade,
-  projects,
-  disabled,
-}: GradeControlProps) {
+function GradeControl({ sessionId, grade, projects }: GradeControlProps) {
+  let fetcher = useFetcher()
+  let disabled = fetcher.state !== 'idle'
+
   return (
     <div className="py-8">
-      <FormWithHiddenMethod method="post" replace>
+      <fetcher.Form method="post" replace>
         <input type="hidden" name="sessionId" value={sessionId} />
         <input type="hidden" name="grade" value={grade} />
         <button
@@ -190,55 +196,15 @@ function GradeControl({
           <span>{createGradeLabel(grade)}</span>
           <ProjectIcon count={projects.length} />
         </button>
-      </FormWithHiddenMethod>
+      </fetcher.Form>
       <p className="pt-2 text-xl text-gray-400">Attempts</p>
       <ul>
         {projects.map(({ id, attempts }) => (
-          <li key={id} className="flex items-center justify-between">
-            <AttemptsControl
-              projectId={id}
-              attempts={attempts}
-              disabled={disabled}
-            />
-            <RemoveProjectButton projectId={id} disabled={disabled} />
-          </li>
+          <ProjectControl key={id} id={id} attempts={attempts} />
         ))}
       </ul>
     </div>
   )
-}
-
-/**
- * Detects if any grades and all of it's project controls should be disabled
- * @returns The grade to be disabled, or null if none
- */
-function useDisableGrade(): null | Grade {
-  let { session } = useLoaderData<Serialized<LoaderData>>()
-  let { submission } = useTransition()
-
-  let body = submission?.formData
-
-  if (!body) return null
-
-  // if a new project is being added, disable all controls
-  let grade = body.get('grade')
-  if (isGrade(grade)) {
-    return grade
-  }
-
-  // if a project is being deleted, disable all controls
-  let method = body.get('_method')
-  let id = parseFormNumber(body, 'id')
-  if (Number.isNaN(id)) return null
-
-  if (method === 'delete') {
-    const projectBeingDeleted = session.projects.find(
-      (project) => project.id === id
-    )
-    return projectBeingDeleted ? projectBeingDeleted.grade : null
-  }
-
-  return null
 }
 
 let gradeToLabel: Record<Grade, string> = {
@@ -249,18 +215,6 @@ let gradeToLabel: Record<Grade, string> = {
   v7_v8: 'V7 - V8',
   v9_v10: 'V9 - V10',
   v11_: 'V11+',
-}
-
-function createEmptyProjects(): { [key in Grade]: Project[] } {
-  return {
-    vb_v0: [],
-    v1_v2: [],
-    v3_v4: [],
-    v5_v6: [],
-    v7_v8: [],
-    v9_v10: [],
-    v11_: [],
-  }
 }
 
 // Object.keys is type string[], so we have to type caste it
@@ -279,6 +233,32 @@ function createGradeLabel(grade: Grade) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isGrade(grade: any): grade is Grade {
   return gradesSet.has(grade)
+}
+
+type ProjectControlProps = {
+  id: number
+  attempts: number
+}
+function ProjectControl({ id, attempts }: ProjectControlProps) {
+  let deleteProjectFetcher = useFetcherWithHiddenMethod()
+  let deletingProject = deleteProjectFetcher.state !== 'idle'
+
+  return (
+    <li className="flex items-center justify-between">
+      <AttemptsControl
+        projectId={id}
+        attempts={attempts}
+        disabled={deletingProject}
+      />
+      <deleteProjectFetcher.Form method="delete" replace>
+        <input type="hidden" name="id" value={id} />
+        <button type="submit" className="group" disabled={deletingProject}>
+          <VisuallyHidden>remove project</VisuallyHidden>
+          <RemoveIcon />
+        </button>
+      </deleteProjectFetcher.Form>
+    </li>
+  )
 }
 
 type AttemptsControlProps = {
@@ -329,22 +309,6 @@ function AttemptsControl({
         </button>
       </div>
     </fetcher.Form>
-  )
-}
-
-type RemoveProjectButtonProps = { projectId: number; disabled: boolean }
-function RemoveProjectButton({
-  projectId,
-  disabled,
-}: RemoveProjectButtonProps) {
-  return (
-    <FormWithHiddenMethod method="delete" replace>
-      <input type="hidden" name="id" value={projectId} />
-      <button type="submit" className="group" disabled={disabled}>
-        <VisuallyHidden>remove project</VisuallyHidden>
-        <RemoveIcon />
-      </button>
-    </FormWithHiddenMethod>
   )
 }
 
