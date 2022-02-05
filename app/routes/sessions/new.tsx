@@ -100,10 +100,10 @@ export default function NewSession() {
   let projectsByGrade = useProjectsByGrade(session.projects)
 
   return (
-    <main className="flex flex-col lg:w-1/2 m-auto p-8">
-      <h1 className="text-4xl text-center">New Session</h1>
+    <main className="m-auto flex flex-col p-8 lg:w-1/2">
+      <h1 className="text-center text-4xl">New Session</h1>
 
-      <section className="py-16 space-y-8">
+      <section className="space-y-8 py-16">
         <DateTimeInput
           name="start-time"
           label="Start Time"
@@ -156,11 +156,11 @@ type DateTimeInputProps = {
 }
 function DateTimeInput({ name, label, defaultValue }: DateTimeInputProps) {
   return (
-    <label className="flex flex-col text-xl text-emerald-600 hover:text-emerald-800 active:text-emerald-900 font-bold">
+    <label className="flex flex-col text-xl font-bold text-emerald-600 hover:text-emerald-800 active:text-emerald-900">
       <span>{label}</span>
       <input
         // apply a padding to line up with the icons
-        className="font-normal text-gray-800 mt-2 pr-2"
+        className="mt-2 pr-2 font-normal text-gray-800"
         name={name}
         type="datetime-local"
         defaultValue={defaultValue ?? undefined}
@@ -187,8 +187,8 @@ function GradeControl({ sessionId, grade, projects }: GradeControlProps) {
         <button
           type="submit"
           className={clsx(
-            'text-2xl font-bold w-full flex justify-between items-center',
-            'text-emerald-600 hover:text-emerald-800 active:text-emerald-900 group',
+            'flex w-full items-center justify-between text-2xl font-bold',
+            'group text-emerald-600 hover:text-emerald-800 active:text-emerald-900',
             'disabled:text-emerald-200'
           )}
           disabled={disabled}
@@ -281,7 +281,7 @@ function AttemptsControl({
   return (
     <fetcher.Form method={'patch'} replace>
       <input type="hidden" name="id" value={projectId} />
-      <div className="flex items-center py-4 space-x-4">
+      <div className="flex items-center space-x-4 py-4">
         <button
           className="group"
           type="submit"
@@ -329,7 +329,7 @@ function ProjectIcon({ count }: { count: number }) {
         />
       </svg>
       {/* Note: this will break visually if there is a 3 digit number */}
-      <span className="text-2xl font-semibold absolute text-center leading-[0px] w-full inset-0 top-1/2">
+      <span className="absolute inset-0 top-1/2 w-full text-center text-2xl font-semibold leading-[0px]">
         {count}
       </span>
     </div>
