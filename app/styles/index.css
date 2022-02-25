@@ -532,10 +532,6 @@ Ensure the default browser behavior of the `hidden` attribute.
   width: 100%;
 }
 
-.w-48 {
-  width: 12rem;
-}
-
 .w-12 {
   width: 3rem;
 }
@@ -584,18 +580,9 @@ Ensure the default browser behavior of the `hidden` attribute.
   border-width: 1px;
 }
 
-.border-2 {
-  border-width: 2px;
-}
-
 .border-zinc-400 {
   --tw-border-opacity: 1;
   border-color: rgb(161 161 170 / var(--tw-border-opacity));
-}
-
-.border-gray-800 {
-  --tw-border-opacity: 1;
-  border-color: rgb(31 41 55 / var(--tw-border-opacity));
 }
 
 .bg-green-200 {
@@ -770,14 +757,14 @@ Ensure the default browser behavior of the `hidden` attribute.
   background-color: rgb(212 212 216 / var(--tw-bg-opacity));
 }
 
-.disabled\:text-gray-600:disabled {
-  --tw-text-opacity: 1;
-  color: rgb(75 85 99 / var(--tw-text-opacity));
-}
-
 .disabled\:text-gray-400:disabled {
   --tw-text-opacity: 1;
   color: rgb(156 163 175 / var(--tw-text-opacity));
+}
+
+.disabled\:text-gray-600:disabled {
+  --tw-text-opacity: 1;
+  color: rgb(75 85 99 / var(--tw-text-opacity));
 }
 
 .disabled\:text-emerald-200:disabled {

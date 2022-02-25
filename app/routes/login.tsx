@@ -1,51 +1,93 @@
-import { Form } from '@remix-run/react'
-import { ActionFunction, redirect } from 'remix'
-import { supabaseClient } from '~/db'
-import { commitSession, getSession } from '~/services/session.server'
+import {
+  ActionFunction,
+  LoaderFunction,
+  MetaFunction,
+  useActionData,
+  useTransition,
+} from 'remix'
+import { Form, json, useLoaderData } from 'remix'
+import { z } from 'zod'
+import { authenticator, sessionStorage, supabaseStrategy } from '~/auth.server'
+import { Input } from '~/components'
+import { sleep } from '~/utils/sleep.server'
 
-export let action: ActionFunction = async ({ request }) => {
-  // get user credentials from form
-  let form = await request.formData()
-  // TODO: add error handling
-  let email = form.get('email') as string
-  let password = form.get('password') as string
-
-  // login using the credentials
-  const { user, session, error } = await supabaseClient.auth.signIn({
-    email,
-    password,
-  })
-  // if i have a user then create the cookie with the
-  // auth_token, not sure if i want to use the auth token,
-  // but it works... will do more research
-  if (session) {
-    const data = session.data
-    console.log({ data })
-    // get session and set access_token
-    let cookieSession = await getSession(request.headers.get('Cookie'))
-    cookieSession.set('access_token', session.access_token)
-
-    // redirect to page with the cookie set in header
-    return redirect('/', {
-      headers: {
-        'Set-Cookie': await commitSession(cookieSession),
-      },
-    })
+export const meta: MetaFunction = () => {
+  return {
+    title: 'Login Page',
   }
-
-  return { user, error }
 }
 
-export default function Login() {
+type LoaderData = {
+  error: { message: string } | null
+}
+
+let schema = z
+  .object({
+    message: z.string(),
+  })
+  .nullable()
+
+export const action: ActionFunction = async ({ request }) => {
+  return await authenticator.authenticate('sb', request, {
+    successRedirect: '/private',
+    failureRedirect: '/login',
+  })
+}
+
+export const loader: LoaderFunction = async ({ request }) => {
+  await supabaseStrategy.checkSession(request, {
+    successRedirect: '/private',
+  })
+
+  const session = await sessionStorage.getSession(request.headers.get('Cookie'))
+
+  const { sessionErrorKey } = authenticator
+  // TODO: handle parsing error
+  let error = schema.parse(session.get(sessionErrorKey) ?? null)
+
+  return json<LoaderData>({ error })
+}
+
+export default function Screen() {
+  const loaderData = useLoaderData()
+  const transition = useTransition()
+
+  // TODO: handle when this fails
+  // TODO: figure out how to get rid of this error if it's the users first time on the login page
+  const error = schema.parse(loaderData.error)
+
+  const disabled = transition.state !== 'idle'
+
   return (
-    <Form method="post" className="flex w-48 flex-col">
-      <input type="email" name="email" className="border-2 border-gray-800" />
-      <input
-        type="password"
-        name="password"
-        className="border-2 border-gray-800"
-      />
-      <button>Login</button>
-    </Form>
+    <main className="mx-auto max-w-fit p-8">
+      <Form className="mt-4 sm:w-72" method="post">
+        <fieldset className="space-y-4" disabled={disabled}>
+          <Input
+            type="email"
+            name="email"
+            id="email"
+            placeholder="email"
+            aria-label="email"
+          />
+
+          <Input
+            type="password"
+            name="password"
+            id="password"
+            placeholder="password"
+            aria-label="password"
+          />
+
+          <button
+            className="w-full rounded-md border border-zinc-400 bg-green-200 px-2 py-1 text-gray-800 disabled:bg-zinc-300 disabled:text-gray-600"
+            type="submit"
+          >
+            {disabled ? 'Logging in...' : 'Log in'}
+          </button>
+        </fieldset>
+
+        {error && <p className="mt-2 text-lg text-red-800">{error.message}</p>}
+      </Form>
+    </main>
   )
 }
