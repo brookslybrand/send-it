@@ -4,13 +4,19 @@ import { SupabaseStrategy } from 'remix-auth-supabase'
 import { supabaseClient } from '~/services/supabase.server'
 import type { Session } from '@supabase/supabase-js'
 
+let secret = process.env.COOKIE_SECRET
+
+if (typeof secret !== 'string') {
+  throw new Error('Cookie secret is not properly configured')
+}
+
 export let sessionStorage = createCookieSessionStorage({
   cookie: {
     name: 'sb',
     sameSite: 'lax',
     path: '/',
     httpOnly: true,
-    secrets: ['wow-this-is-so-secret'],
+    secrets: [secret],
     secure: process.env.NODE_ENV === 'production',
   },
 })
