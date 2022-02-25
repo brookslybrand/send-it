@@ -11,7 +11,7 @@ import { z } from 'zod'
 import { db, supabaseClient } from '~/db'
 
 import { Input } from '~/components'
-import { supabaseStrategy } from '~/auth.server'
+import { supabaseStrategy } from '~/services/auth.server'
 import { LoaderFunction } from '@remix-run/server-runtime'
 
 export const meta: MetaFunction = () => {

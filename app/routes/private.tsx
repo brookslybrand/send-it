@@ -1,6 +1,6 @@
 import type { ActionFunction, LoaderFunction, MetaFunction } from 'remix'
 import { Form, json, useLoaderData } from 'remix'
-import { authenticator, supabaseStrategy } from '~/auth.server'
+import { authenticator, supabaseStrategy } from '~/services/auth.server'
 
 export const meta: MetaFunction = () => {
   return {

@@ -2,14 +2,16 @@ import {
   ActionFunction,
   LoaderFunction,
   MetaFunction,
-  useActionData,
   useTransition,
 } from 'remix'
 import { Form, json, useLoaderData } from 'remix'
 import { z } from 'zod'
-import { authenticator, sessionStorage, supabaseStrategy } from '~/auth.server'
+import {
+  authenticator,
+  sessionStorage,
+  supabaseStrategy,
+} from '~/services/auth.server'
 import { Input } from '~/components'
-import { sleep } from '~/utils/sleep.server'
 
 export const meta: MetaFunction = () => {
   return {
@@ -66,6 +68,7 @@ export default function Screen() {
             type="email"
             name="email"
             id="email"
+            required
             placeholder="email"
             aria-label="email"
           />
@@ -74,6 +77,7 @@ export default function Screen() {
             type="password"
             name="password"
             id="password"
+            required
             placeholder="password"
             aria-label="password"
           />

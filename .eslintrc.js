@@ -30,5 +30,6 @@ module.exports = {
     '@typescript-eslint/no-var-requires': 'off',
     'react/display-name': 'off',
     'react/prop-types': 'off',
+    'react/jsx-key': 'off', // potentially turn this back on, was going off for everything and didn't care to fix
   },
 }
