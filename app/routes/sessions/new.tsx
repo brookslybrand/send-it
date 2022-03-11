@@ -12,6 +12,8 @@ import type { Serialized } from '~/db'
 import type { Project, Session, Grade } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
 import { useMemo } from 'react'
+import { checkAuthentication } from '~/services/auth.server'
+import { z } from 'zod'
 
 export let meta: MetaFunction = () => {
   return {
@@ -24,60 +26,63 @@ function parseFormNumber(body: FormData, key: string) {
   return body.has(key) ? Number(body.get(key)) : NaN
 }
 
+const zodGrades = z.enum([
+  'vb_v0',
+  'v1_v2',
+  'v3_v4',
+  'v5_v6',
+  'v7_v8',
+  'v9_v10',
+  'v11_',
+])
+let createProjectFormSchema = z.object({
+  sessionId: z.string(),
+  grade: zodGrades,
+})
+let deleteProjectFormSchema = z.string()
+let updateProjectFormSchema = z.object({
+  projectId: z.string(),
+  attempts: z.number().int().gte(0),
+})
+
 export let action: ActionFunction = async ({ request }) => {
   let body = await addMethodToFormData(request)
   let method = body.get('method')
 
-  switch (method) {
-    // CREATE A NEW PROJECT
-    case 'post': {
-      let sessionId = parseFormNumber(body, 'sessionId')
-      let grade = body.get('grade')
-
-      if (Number.isNaN(sessionId)) {
-        return json({ message: 'No session ID provided' }, 400)
-      } else if (!isGrade(grade)) {
-        return json({ message: 'Invalid grade' }, 400)
+  try {
+    switch (method) {
+      // CREATE A NEW PROJECT
+      case 'post': {
+        let { sessionId, grade } = createProjectFormSchema.parse({
+          sessionId: body.get('sessionId'),
+          grade: body.get('grade'),
+        })
+        let sessionWithNewProject = await createProject(sessionId, grade)
+        return json({ session: sessionWithNewProject.projects })
       }
-
-      let sessionWithNewProject = await createProject(sessionId, grade)
-
-      return json({ session: sessionWithNewProject.projects })
-    }
-    // DELETE A PROJECT
-    case 'delete': {
-      let projectId = parseFormNumber(body, 'id')
-
-      if (Number.isNaN(projectId)) {
-        return json({ message: 'No project ID provided' }, 400)
+      // DELETE A PROJECT
+      case 'delete': {
+        let projectId = deleteProjectFormSchema.parse(body.get('id'))
+        await deleteProject(projectId)
+        return json({ delete: true })
       }
-      await deleteProject(projectId)
-      return json({ delete: true })
-    }
-    // UPDATE NUMBER OF ATTEMPTS ON PROJECT
-    case 'patch': {
-      let projectId = parseFormNumber(body, 'id')
-      let attempts = parseFormNumber(body, 'attempts')
-
-      if (Number.isNaN(projectId)) {
-        return json({ message: 'No project ID provided' }, 400)
+      // UPDATE NUMBER OF ATTEMPTS ON PROJECT
+      case 'patch': {
+        let { projectId, attempts } = updateProjectFormSchema.parse({
+          projectId: body.get('id'),
+          attempts: Number(body.get('attempts')),
+        })
+        await updateProjectAttempts(projectId, attempts)
+        return json({ attempts })
       }
-      if (Number.isNaN(attempts)) {
-        return json(
-          {
-            message: `Invalid attempts provided provided: ${body.get(
-              'attempts'
-            )}`,
-          },
-          400
-        )
+      default: {
+        return json({ message: `Unsupported method ${method}` }, 501)
       }
-      await updateProjectAttempts(projectId, attempts)
-      return json({ attempts })
     }
-    default: {
-      return json({ message: `Unsupported method ${method}` }, 501)
-    }
+  } catch (error) {
+    // TODO: make errors a little more specific
+    console.log(error)
+    return json({ message: 'Invalid form data' }, 400)
   }
 }
 
@@ -87,9 +92,10 @@ type LoaderData = {
   }
 }
 
-export let loader: LoaderFunction = async () => {
+export let loader: LoaderFunction = async ({ request }) => {
   // TODO: Get the authenticated user, not just me every time
-  let session = await findOrCreateInProgressSession('brookslybrand@gmail.com')
+  let user = await checkAuthentication(request)
+  let session = await findOrCreateInProgressSession(user)
 
   let result: LoaderData = { session }
   return json(result)
@@ -170,7 +176,7 @@ function DateTimeInput({ name, label, defaultValue }: DateTimeInputProps) {
 }
 
 type GradeControlProps = {
-  sessionId: number
+  sessionId: string
   grade: Grade
   projects: Project[]
 }
@@ -236,7 +242,7 @@ function isGrade(grade: any): grade is Grade {
 }
 
 type ProjectControlProps = {
-  id: number
+  id: string
   attempts: number
 }
 function ProjectControl({ id, attempts }: ProjectControlProps) {
@@ -262,7 +268,7 @@ function ProjectControl({ id, attempts }: ProjectControlProps) {
 }
 
 type AttemptsControlProps = {
-  projectId: number
+  projectId: string
   attempts: number
   disabled: boolean
 }

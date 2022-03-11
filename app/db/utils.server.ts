@@ -1,20 +1,7 @@
-import { Grade } from '@prisma/client'
 import { db } from '~/db'
+import type { Grade, User } from '@prisma/client'
 
-export async function findOrCreateInProgressSession(email: string) {
-  let user = await db.user.findUnique({
-    where: {
-      email,
-    },
-    select: {
-      id: true,
-    },
-  })
-
-  if (!user?.id) {
-    throw new Error('User not found')
-  }
-
+export async function findOrCreateInProgressSession(user: User) {
   let session = await db.session.findFirst({
     where: {
       userId: user.id,
@@ -52,7 +39,7 @@ export async function findOrCreateInProgressSession(email: string) {
   return session
 }
 
-export function createProject(sessionId: number, grade: Grade) {
+export function createProject(sessionId: string, grade: Grade) {
   return db.session.update({
     where: {
       id: sessionId,
@@ -70,11 +57,11 @@ export function createProject(sessionId: number, grade: Grade) {
   })
 }
 
-export function deleteProject(projectId: number) {
+export function deleteProject(projectId: string) {
   return db.project.delete({ where: { id: projectId } })
 }
 
-export function updateProjectAttempts(projectId: number, rawAttempts: number) {
+export function updateProjectAttempts(projectId: string, rawAttempts: number) {
   let attempts = rawAttempts > 0 ? rawAttempts : 0 // can't have less than 0 attempts
   return db.project.update({
     where: { id: projectId },
