@@ -1,7 +1,6 @@
-import { MetaFunction, LoaderFunction, Link } from 'remix'
+import { MetaFunction, LoaderFunction, Link, Form, ActionFunction } from 'remix'
 import { useLoaderData } from 'remix'
-import { db } from '~/db'
-import { User } from '.prisma/client'
+import { authenticator, checkAuthentication } from '~/services/auth.server'
 
 export let meta: MetaFunction = () => {
   return {
@@ -9,16 +8,14 @@ export let meta: MetaFunction = () => {
     description: 'Welcome to remix!',
   }
 }
-
-async function getUsers() {
-  const users = await db.user.findMany()
-  return users.map(({ id, name }) => ({ id, name }))
+export const action: ActionFunction = async ({ request }) => {
+  await authenticator.logout(request, { redirectTo: '/login' })
 }
 
-type LoaderData = { users: Pick<User, 'id' | 'name'>[] }
-export let loader: LoaderFunction = async () => {
-  const users = await getUsers()
-  const result: LoaderData = { users }
+type LoaderData = { name: string }
+export let loader: LoaderFunction = async ({ request }) => {
+  const user = await checkAuthentication(request)
+  const result: LoaderData = { name: user.name }
   return result
 }
 
@@ -26,23 +23,20 @@ export default function Index() {
   let data = useLoaderData<LoaderData>()
 
   return (
-    <div className="text-center p-6">
-      <h2 className="text-4xl">Welcome to Remix!</h2>
-
-      <h3 className="text-3xl mt-4">Users</h3>
-      <ol>
-        {data.users.map(({ id, name }) => (
-          <li key={id}>{name}</li>
-        ))}
-      </ol>
+    <div className="p-6 text-center">
+      <h2 className="text-4xl">{data.name}, send it!</h2>
 
       {/* TODO: Use useTransition to show a loading indicator if this is taking a little while */}
       <Link
-        className="block text-2xl mt-6 text-blue-800 hover:text-blue-400"
+        className="mt-6 block text-2xl text-blue-800 hover:text-blue-400"
         to="sessions/new"
       >
         Create a new session
       </Link>
+      {/* TODO: make prettier */}
+      <Form method="post">
+        <button>Log Out</button>
+      </Form>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import {
   ActionFunction,
+  Link,
   LoaderFunction,
   MetaFunction,
   useTransition,
@@ -31,14 +32,14 @@ let schema = z
 
 export const action: ActionFunction = async ({ request }) => {
   return await authenticator.authenticate('sb', request, {
-    successRedirect: '/private',
+    successRedirect: '/',
     failureRedirect: '/login',
   })
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
   await supabaseStrategy.checkSession(request, {
-    successRedirect: '/private',
+    successRedirect: '/',
   })
 
   const session = await sessionStorage.getSession(request.headers.get('Cookie'))
@@ -92,6 +93,13 @@ export default function Screen() {
 
         {error && <p className="mt-2 text-lg text-red-800">{error.message}</p>}
       </Form>
+
+      <Link
+        className="mt-4 block text-center text-lg text-blue-900 hover:text-blue-600"
+        to="../create-account"
+      >
+        create a new account
+      </Link>
     </main>
   )
 }

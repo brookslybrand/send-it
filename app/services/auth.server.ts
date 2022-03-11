@@ -3,6 +3,7 @@ import { Authenticator, AuthorizationError } from 'remix-auth'
 import { SupabaseStrategy } from 'remix-auth-supabase'
 import { supabaseClient } from '~/services/supabase.server'
 import type { Session } from '@supabase/supabase-js'
+import { db } from '~/db'
 
 let secret = process.env.COOKIE_SECRET
 
@@ -67,3 +68,28 @@ export const authenticator = new Authenticator<Session>(sessionStorage, {
 })
 
 authenticator.use(supabaseStrategy)
+
+/**
+ * Check if authenticated: will redirect if false, otherwise will return the session
+ * @param request
+ * @returns
+ */
+export async function checkAuthentication(request: Request) {
+  const session = await supabaseStrategy.checkSession(request, {
+    failureRedirect: '/login',
+  })
+
+  // find the user in the database and return that instead of the session
+  const user = await db.user.findUnique({ where: { id: session.user?.id } })
+
+  // if no user was found, logout whatever user we have and logout
+  // TODO: if you get in this state, that's not good, so I need to figure out an account recovery strategy
+  if (!user) {
+    await authenticator.logout(request, { redirectTo: '/login' })
+    // this error will never actually run, since the above would redirect, this is
+    // just here so the return type is User instead of User | null
+    throw new Error('No user found!')
+  }
+
+  return user
+}

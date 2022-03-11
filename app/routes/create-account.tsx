@@ -65,8 +65,10 @@ export let action: ActionFunction = async ({ request }) => {
     if (!user || error) {
       throw new Error('Failed to create user')
     }
+
     newUser = await db.user.create({
       data: {
+        id: user.id,
         name,
         email,
       },
