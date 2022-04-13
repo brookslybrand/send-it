@@ -1,18 +1,12 @@
-import { User } from '@prisma/client'
-import {
-  Form,
-  useTransition,
-  ActionFunction,
-  MetaFunction,
-  useActionData,
-  json,
-} from 'remix'
+import type { User } from '@prisma/client'
+import type { ActionFunction, MetaFunction } from 'remix'
+import { Form, useTransition, useActionData, json } from 'remix'
 import { z } from 'zod'
 import { db, supabaseClient } from '~/db'
 
 import { Input } from '~/components'
 import { supabaseStrategy } from '~/services/auth.server'
-import { LoaderFunction } from '@remix-run/server-runtime'
+import type { LoaderFunction } from '@remix-run/server-runtime'
 
 export const meta: MetaFunction = () => {
   return {

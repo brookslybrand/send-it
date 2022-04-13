@@ -1,4 +1,5 @@
-import { MetaFunction, LoaderFunction, Link, Form, ActionFunction } from 'remix'
+import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
+import { Link, Form } from 'remix'
 import { useLoaderData } from 'remix'
 import { authenticator, checkAuthentication } from '~/services/auth.server'
 

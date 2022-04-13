@@ -1,10 +1,5 @@
-import {
-  ActionFunction,
-  Link,
-  LoaderFunction,
-  MetaFunction,
-  useTransition,
-} from 'remix'
+import type { ActionFunction, LoaderFunction, MetaFunction } from 'remix'
+import { Link, useTransition } from 'remix'
 import { Form, json, useLoaderData } from 'remix'
 import { z } from 'zod'
 import {

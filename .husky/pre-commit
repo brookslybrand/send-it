@@ -1,7 +1,9 @@
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
 
-npm run styles:build
+# honestly might delete these precommits in favor of a github action instead
+npm run dev:css
 git add ./app/styles/**.css
 npm run pretty-quick
 npm run lint
+npm run typecheck

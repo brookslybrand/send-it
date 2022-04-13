@@ -4,23 +4,31 @@
   "description": "",
   "license": "",
   "scripts": {
-    "db:init": "prisma db push && prisma db seed",
-    "styles:build": "tailwindcss -i ./app/styles/tailwind.css -o ./app/styles/index.css",
-    "styles:watch": "npm run styles:build -- --watch",
-    "prebuild": "npm run styles:build && prisma generate",
-    "build": "remix build",
-    "remix:dev": "node -r dotenv/config node_modules/.bin/remix dev",
-    "predev": "prisma generate",
-    "dev": "npm-run-all --parallel styles:watch remix:dev",
     "postinstall": "remix setup node",
+    "build": "run-s build:*",
+    "build:remix": "remix build",
+    "build:css": "npm run generate:css -- --minify",
+    "predev": "prisma generate",
+    "dev": "run-p dev:*",
+    "dev:css": "npm run generate:css -- --watch",
+    "dev:remix": "cross-env NODE_ENV=development binode -- @remix-run/dev:remix dev",
+    "format": "prettier --write .",
+    "generate:css": "tailwindcss -o ./app/styles/index.css",
+    "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
+    "db:init": "prisma db push && prisma db seed",
     "start": "remix-serve build",
+    "typecheck": "tsc -b",
     "prepare": "husky install",
-    "lint": "eslint --ignore-path .gitignore --ext .js,.ts,.tsx ./app",
     "pretty-quick": "pretty-quick --staged"
   },
   "prisma": {
     "seed": "ts-node ./prisma/seed.ts"
   },
+  "eslintIgnore": [
+    "/node_modules",
+    "/public/build",
+    "/api/_build"
+  ],
   "dependencies": {
     "@prisma/client": "^3.12.0",
     "@reach/visually-hidden": "^0.16.0",
@@ -40,16 +48,14 @@
   },
   "devDependencies": {
     "@remix-run/dev": "^1.3.5",
+    "@remix-run/eslint-config": "^1.3.5",
     "@types/node": "^17.0.23",
     "@types/react": "^18.0.3",
     "@types/react-dom": "^18.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.19.0",
-    "@typescript-eslint/parser": "^5.19.0",
     "dotenv": "^16.0.0",
     "eslint": "^8.13.0",
+    "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-jsx-a11y": "^6.5.1",
-    "eslint-plugin-react": "^7.29.4",
-    "eslint-plugin-react-hooks": "^4.4.0",
     "husky": "^6.0.0",
     "npm-run-all": "^4.1.5",
     "prettier": "^2.6.2",
@@ -58,7 +64,13 @@
     "prisma": "^3.12.0",
     "tailwindcss": "^3.0.24",
     "ts-node": "^10.7.0",
-    "typescript": "^4.6.3"
+    "typescript": "^4.6.3",
+    "@types/eslint": "^8.4.1",
+    "binode": "^1.0.5",
+    "c8": "^7.11.0",
+    "cross-env": "^7.0.3",
+    "eslint-plugin-import": "^2.25.4",
+    "tsconfig-paths": "^3.14.1"
   },
   "engines": {
     "node": ">=14"

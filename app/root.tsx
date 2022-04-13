@@ -1,4 +1,5 @@
-import { LinksFunction, ScrollRestoration } from 'remix'
+import type { LinksFunction } from 'remix'
+import { ScrollRestoration } from 'remix'
 import { Meta, Links, Scripts, LiveReload, useCatch } from 'remix'
 import { Outlet } from 'react-router-dom'
 

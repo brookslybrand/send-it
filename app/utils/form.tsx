@@ -35,6 +35,7 @@ export function useFetcherWithHiddenMethod<T>(): ReturnType<typeof useFetcher> {
         )
       }
     )
+    Form.displayName = 'FormWithHiddenMethod'
 
     return { ...fetcher, Form }
   }, [fetcher])
