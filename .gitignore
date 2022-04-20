@@ -6,7 +6,7 @@ node_modules
 .output
 
 /public/build
-api/_build
+/api/_build
 
-prisma/*.db**
+/prisma/*.db**
 .env

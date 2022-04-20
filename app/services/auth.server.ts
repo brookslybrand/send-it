@@ -5,7 +5,7 @@ import { supabaseClient } from '~/services/supabase.server'
 import type { Session } from '@supabase/supabase-js'
 import { db } from '~/db'
 
-let secret = process.env.COOKIE_SECRET
+let secret = process.env.SESSION_SECRET
 
 if (typeof secret !== 'string') {
   throw new Error('Cookie secret is not properly configured')

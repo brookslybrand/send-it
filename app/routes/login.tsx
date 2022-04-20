@@ -19,13 +19,10 @@ type LoaderData = {
   error: { message: string } | null
 }
 
-let schema = z
-  .object({
-    message: z.string(),
-  })
-  .nullable()
+let schema = z.object({ message: z.string() }).nullable()
 
 export const action: ActionFunction = async ({ request }) => {
+  console.log('action!!')
   return await authenticator.authenticate('sb', request, {
     successRedirect: '/',
     failureRedirect: '/login',
@@ -33,25 +30,28 @@ export const action: ActionFunction = async ({ request }) => {
 }
 
 export const loader: LoaderFunction = async ({ request }) => {
+  // if logged in redirect to home
   await supabaseStrategy.checkSession(request, {
     successRedirect: '/',
   })
-
+  // otherwise check if there was an error from the last login attempt
   const session = await sessionStorage.getSession(request.headers.get('Cookie'))
-
-  const { sessionErrorKey } = authenticator
-  // TODO: handle parsing error
-  let error = schema.parse(session.get(sessionErrorKey) ?? null)
-
-  return json<LoaderData>({ error })
+  let error = schema.parse(session.get(authenticator.sessionErrorKey) ?? null)
+  return json<LoaderData>(
+    { error },
+    // need to recommit the session to clear the flash
+    {
+      headers: {
+        'Set-Cookie': await sessionStorage.commitSession(session),
+      },
+    }
+  )
 }
 
 export default function Screen() {
   const loaderData = useLoaderData()
   const transition = useTransition()
 
-  // TODO: handle when this fails
-  // TODO: figure out how to get rid of this error if it's the users first time on the login page
   const error = schema.parse(loaderData.error)
 
   const disabled = transition.state !== 'idle'
