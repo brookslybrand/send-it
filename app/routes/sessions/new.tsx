@@ -1,19 +1,20 @@
 import VisuallyHidden from '@reach/visually-hidden'
 import clsx from 'clsx'
-import { json, useFetcher, useLoaderData } from 'remix'
+import { json, useLoaderData } from 'remix'
 import {
   createProject,
   deleteProject,
   updateProjectAttempts,
   findOrCreateInProgressSession,
 } from '~/db'
-import { addMethodToFormData, useFetcherWithHiddenMethod } from '~/utils/form'
+import { useFetcherWithHiddenMethod } from '~/utils/form'
 import type { Serialized } from '~/db'
 import type { Project, Session, Grade } from '.prisma/client'
 import type { MetaFunction, LoaderFunction, ActionFunction } from 'remix'
 import { useMemo } from 'react'
 import { checkAuthentication } from '~/services/auth.server'
 import { z } from 'zod'
+import { getFormDataOrFail } from 'remix-params-helper'
 
 export let meta: MetaFunction = () => {
   return {
@@ -26,7 +27,7 @@ function parseFormNumber(body: FormData, key: string) {
   return body.has(key) ? Number(body.get(key)) : NaN
 }
 
-const zodGrades = z.enum([
+let zodGrades = z.enum([
   'vb_v0',
   'v1_v2',
   'v3_v4',
@@ -35,48 +36,56 @@ const zodGrades = z.enum([
   'v9_v10',
   'v11_',
 ])
+
 let createProjectFormSchema = z.object({
   sessionId: z.string(),
   grade: zodGrades,
+  _method: z.literal('post'),
 })
-let deleteProjectFormSchema = z.string()
+let deleteProjectFormSchema = z.object({
+  id: z.string(),
+  _method: z.literal('delete'),
+})
 let updateProjectFormSchema = z.object({
-  projectId: z.string(),
-  attempts: z.number().int().gte(0),
+  id: z.string(),
+  attempts: z.string(),
+  _method: z.literal('patch'),
 })
+
+let formSchema = z.union([
+  createProjectFormSchema,
+  deleteProjectFormSchema,
+  updateProjectFormSchema,
+])
 
 export let action: ActionFunction = async ({ request }) => {
-  let body = await addMethodToFormData(request)
-  let method = body.get('method')
-
   try {
-    switch (method) {
+    let formData = await getFormDataOrFail(request, formSchema)
+
+    switch (formData._method) {
       // CREATE A NEW PROJECT
       case 'post': {
-        let { sessionId, grade } = createProjectFormSchema.parse({
-          sessionId: body.get('sessionId'),
-          grade: body.get('grade'),
-        })
+        let { sessionId, grade } = formData
         let sessionWithNewProject = await createProject(sessionId, grade)
         return json({ session: sessionWithNewProject.projects })
       }
       // DELETE A PROJECT
       case 'delete': {
-        let projectId = deleteProjectFormSchema.parse(body.get('id'))
-        await deleteProject(projectId)
+        await deleteProject(formData.id)
         return json({ delete: true })
       }
       // UPDATE NUMBER OF ATTEMPTS ON PROJECT
       case 'patch': {
-        let { projectId, attempts } = updateProjectFormSchema.parse({
-          projectId: body.get('id'),
-          attempts: Number(body.get('attempts')),
-        })
-        await updateProjectAttempts(projectId, attempts)
+        let attempts = Number(formData.attempts)
+        if (Number.isNaN(attempts) || attempts < 0) {
+          throw new Error('Invalid number of attempts')
+        }
+        await updateProjectAttempts(formData.id, attempts)
         return json({ attempts })
       }
       default: {
-        return json({ message: `Unsupported method ${method}` }, 501)
+        // leaving this here incase I remove/add a case and forget to cleanup
+        return json({ message: `Unsupported method` }, 501)
       }
     }
   } catch (error) {
@@ -182,7 +191,7 @@ type GradeControlProps = {
 }
 
 function GradeControl({ sessionId, grade, projects }: GradeControlProps) {
-  let fetcher = useFetcher()
+  let fetcher = useFetcherWithHiddenMethod()
   let disabled = fetcher.state !== 'idle'
 
   return (

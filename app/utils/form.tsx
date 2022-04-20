@@ -55,15 +55,14 @@ export function useHiddenMethod(method: FormProps['method']) {
   const isHydrated = useHydrated()
   const validMethod = isHydrated ? method : getValidMethod(method)
   //  hidden input for non `get` and `post` methods
-  const Input = (props: InputProps) =>
-    method && ['put', 'patch', 'delete'].includes(method) ? (
-      <input
-        {...props} // not sure why, but might want to be able to pass more props in
-        type="hidden"
-        name={hiddenMethodName}
-        value={method}
-      />
-    ) : null
+  const Input = (props: InputProps) => (
+    <input
+      {...props} // not sure why, but might want to be able to pass more props in
+      type="hidden"
+      name={hiddenMethodName}
+      value={method}
+    />
+  )
   return [validMethod, Input] as const
 }
 

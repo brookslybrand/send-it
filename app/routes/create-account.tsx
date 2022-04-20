@@ -32,8 +32,6 @@ type ActionData = User | { error: string }
 export let action: ActionFunction = async ({ request }) => {
   let form = await request.formData()
   let data
-  // let email = form.get('email')
-  // let password = form.get('password')
   try {
     data = schema.parse({
       name: form.get('name'),
