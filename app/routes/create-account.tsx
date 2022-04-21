@@ -2,6 +2,7 @@ import type { User } from '@prisma/client'
 import type { ActionFunction, MetaFunction } from 'remix'
 import { Form, useTransition, useActionData, json } from 'remix'
 import { z } from 'zod'
+import { getFormDataOrFail } from 'remix-params-helper'
 import { db, supabaseClient } from '~/db'
 
 import { Input } from '~/components'
@@ -30,14 +31,9 @@ let schema = z.object({
 type ActionData = User | { error: string }
 
 export let action: ActionFunction = async ({ request }) => {
-  let form = await request.formData()
   let data
   try {
-    data = schema.parse({
-      name: form.get('name'),
-      email: form.get('email'),
-      password: form.get('password'),
-    })
+    data = await getFormDataOrFail(request, schema)
   } catch (error) {
     // TODO: handle specific zod errors
     // if (error instanceof ZodError) {
@@ -71,28 +67,6 @@ export let action: ActionFunction = async ({ request }) => {
   }
 
   return newUser
-
-  // if (!signUpError) {
-  //   // create the user in profiles table
-  //   const { data, error: profileError } = await supabaseClient
-  //     .from('profiles')
-  //     .insert([{ email, first, last, id: user?.id }])
-
-  //   // if error return
-  //   if (profileError) return { error: profileError }
-
-  //   // all good, set session and move on
-  //   let session = await getSession(request.headers.get('Cookie'))
-  //   session.set('access_token', sessionData.access_token)`
-  //   return redirect('/', {
-  //     headers: {
-  //       'Set-Cookie': await commitSession(session),
-  //     },
-  //   })
-  // }
-
-  // // else return the error
-  // return { user, signUpError }
 }
 
 export const loader: LoaderFunction = async ({ request }) => {

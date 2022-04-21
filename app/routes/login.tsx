@@ -36,6 +36,7 @@ export const loader: LoaderFunction = async ({ request }) => {
   })
   // otherwise check if there was an error from the last login attempt
   const session = await sessionStorage.getSession(request.headers.get('Cookie'))
+
   let error = schema.parse(session.get(authenticator.sessionErrorKey) ?? null)
   return json<LoaderData>(
     { error },
